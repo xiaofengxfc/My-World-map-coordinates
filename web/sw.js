@@ -2,7 +2,7 @@
    Service Worker - 离线支持
    ========================================== */
 
-const CACHE_NAME = 'mc-coords-v1';
+const CACHE_NAME = 'mc-coords-v4';
 const ASSETS = [
   '/',
   '/index.html',
