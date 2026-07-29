@@ -92,7 +92,27 @@ database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # 替换为实际 ID
 初始化表结构：
 
 ```bash
-npx wrangler d1 execute mc-coords --file=schema.sql
+cd worker
+npx.cmd wrangler d1 execute mc-coords --file schema.sql
+```
+
+如果使用 Cloudflare Dashboard 的 D1 控制台，直接粘贴以下 SQL 执行：
+
+```sql
+CREATE TABLE IF NOT EXISTS locations (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  dimension TEXT NOT NULL CHECK(dimension IN ('overworld', 'nether', 'end')),
+  x REAL NOT NULL,
+  y REAL NOT NULL DEFAULT 64,
+  z REAL NOT NULL,
+  description TEXT DEFAULT '',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_locations_dimension ON locations(dimension);
+CREATE INDEX IF NOT EXISTS idx_locations_created_at ON locations(created_at);
 ```
 
 ### 2. 部署 Worker API
