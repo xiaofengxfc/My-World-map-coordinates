@@ -96,7 +96,7 @@ export function useCoords() {
       name: '',
       category: '',
       x: 0,
-      y: '',
+      y: 0,
       z: 0,
       description: '',
     }

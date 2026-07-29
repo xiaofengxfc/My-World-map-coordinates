@@ -5,83 +5,89 @@
         <h2>{{ editingId ? '编辑坐标' : '添加坐标' }}</h2>
         <button class="btn-icon modal-close" type="button" @click="$emit('close')">&times;</button>
       </div>
-      <form class="modal-body" @submit.prevent="handleSubmit">
-        <div class="form-group">
-          <label for="name">名称 <span class="required">*</span></label>
-          <input
-            id="name"
-            v-model="localForm.name"
-            type="text"
-            placeholder="例如：出生点、末地传送门..."
-            maxlength="50"
-            required
-            ref="nameInput"
-          />
-        </div>
 
-        <div class="form-row form-row-triple">
-          <div class="form-group">
-            <label for="x">X <span class="required">*</span></label>
-            <input id="x" v-model.number="localForm.x" type="number" step="any" required />
-          </div>
-          <div class="form-group">
-            <label for="y">Y</label>
-            <input id="y" v-model.number="localForm.y" type="number" step="any" placeholder="64" />
-          </div>
-          <div class="form-group">
-            <label for="z">Z <span class="required">*</span></label>
-            <input id="z" v-model.number="localForm.z" type="number" step="any" required />
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>分类</label>
-          <div class="category-select-row">
-            <select :value="localForm.category" @change="onCategorySelect">
-              <option value="">未分类</option>
-              <option
-                v-for="c in allCategories"
-                :key="c.category"
-                :value="c.category"
-              >{{ c.category }} ({{ c.count }})</option>
-              <!-- 新建的分类临时加入选项 -->
-              <option v-if="pendingNewCat && !isInAllCategories" :value="pendingNewCat">
-                {{ pendingNewCat }}（新建）
-              </option>
-            </select>
-            <button type="button" class="btn btn-sm btn-outline" @click="toggleNewInput">
-              {{ showNewInput ? '取消' : '＋新建' }}
-            </button>
-          </div>
-          <div class="category-new-row" v-if="showNewInput">
+      <form @submit.prevent="handleSubmit">
+        <div class="modal-body">
+          <!-- 名称 -->
+          <div class="field">
+            <label for="name">名称 <span class="required">*</span></label>
             <input
-              v-model="newCategoryName"
+              id="name"
+              v-model="localForm.name"
               type="text"
-              placeholder="输入新分类名称..."
-              maxlength="20"
-              ref="newCatInput"
-              @keyup.enter="confirmNewCategory"
+              placeholder="给这个坐标起个名字"
+              maxlength="50"
+              required
+              ref="nameInput"
             />
-            <button type="button" class="btn btn-sm btn-primary" @click="confirmNewCategory">确定</button>
           </div>
-          <div class="category-hint">未选择即为「未分类」</div>
-        </div>
 
-        <div class="form-group">
-          <label for="desc">描述</label>
-          <textarea
-            id="desc"
-            v-model="localForm.description"
-            rows="2"
-            placeholder="坐标描述、注意事项..."
-            maxlength="200"
-          ></textarea>
+          <!-- X Y Z -->
+          <div class="field">
+            <label>坐标</label>
+            <div class="coord-row">
+              <div class="coord-input">
+                <span class="coord-label">X</span>
+                <input v-model.number="localForm.x" type="number" step="any" required placeholder="0" />
+              </div>
+              <div class="coord-input">
+                <span class="coord-label">Y</span>
+                <input v-model.number="localForm.y" type="number" step="any" placeholder="0" />
+              </div>
+              <div class="coord-input">
+                <span class="coord-label">Z</span>
+                <input v-model.number="localForm.z" type="number" step="any" required placeholder="0" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 分类 -->
+          <div class="field">
+            <label for="categoryInput">分类</label>
+            <div class="category-wrap">
+              <input
+                id="categoryInput"
+                v-model="localForm.category"
+                type="text"
+                placeholder="未分类 — 输入新建或从列表选择"
+                maxlength="20"
+                @focus="showDropdown = true"
+                @blur="onBlur"
+                @input="onCategoryInput"
+                ref="categoryInput"
+                autocomplete="off"
+              />
+              <div class="category-dropdown" v-if="showDropdown && filteredCategories.length > 0">
+                <div
+                  v-for="c in filteredCategories"
+                  :key="c.category"
+                  class="category-option"
+                  @mousedown.prevent="selectCategory(c.category)"
+                >
+                  {{ c.category }}
+                  <span class="cat-count">{{ c.count }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 描述 -->
+          <div class="field">
+            <label for="desc">描述</label>
+            <textarea
+              id="desc"
+              v-model="localForm.description"
+              rows="2"
+              placeholder="备注、注意事项…"
+              maxlength="200"
+            ></textarea>
+          </div>
         </div>
 
         <div class="form-actions">
           <button type="button" class="btn btn-outline" @click="$emit('close')">取消</button>
           <button type="submit" class="btn btn-primary">
-            {{ editingId ? '保存' : '添加' }}
+            {{ editingId ? '保存修改' : '添加坐标' }}
           </button>
         </div>
       </form>
@@ -101,24 +107,24 @@ const props = defineProps({
 const emit = defineEmits(['close', 'save'])
 
 const nameInput = ref(null)
-const newCatInput = ref(null)
-const showNewInput = ref(false)
-const newCategoryName = ref('')
-const pendingNewCat = ref('')
+const categoryInput = ref(null)
+const showDropdown = ref(false)
 
 const localForm = reactive({
   name: '',
   category: '',
   x: 0,
-  y: '',
+  y: 0,
   z: 0,
   description: '',
 })
 
-// 新建的分类是否已存在于已有分类列表中
-const isInAllCategories = computed(() =>
-  props.allCategories.some(c => c.category === pendingNewCat.value)
-)
+const filteredCategories = computed(() => {
+  const q = localForm.category.toLowerCase()
+  return props.allCategories.filter(c =>
+    c.category.toLowerCase().includes(q) && c.category !== localForm.category
+  )
+})
 
 watch(
   () => props.form,
@@ -136,29 +142,20 @@ watch(
   { immediate: true }
 )
 
-function onCategorySelect(e) {
-  localForm.category = e.target.value
+function selectCategory(name) {
+  localForm.category = name
+  showDropdown.value = false
 }
 
-function toggleNewInput() {
-  showNewInput.value = !showNewInput.value
-  if (showNewInput.value) {
-    nextTick(() => newCatInput.value?.focus())
-  }
+function onCategoryInput() {
+  showDropdown.value = true
 }
 
-function confirmNewCategory() {
-  const name = newCategoryName.value.trim()
-  if (name) {
-    localForm.category = name
-    pendingNewCat.value = name
-  }
-  showNewInput.value = false
-  newCategoryName.value = ''
+function onBlur() {
+  setTimeout(() => { showDropdown.value = false }, 150)
 }
 
 function onOverlayClick(e) {
-  // 仅当点击目标就是 overlay 背景本身时才关闭（不是其子元素）
   if (e.currentTarget === e.target) {
     emit('close')
   }
@@ -171,24 +168,123 @@ function handleSubmit() {
 </script>
 
 <style scoped>
-.category-select-row {
-  display: flex;
-  gap: 6px;
+.field {
+  margin-bottom: 16px;
 }
-.category-select-row select {
-  flex: 1;
+.field:last-child {
+  margin-bottom: 0;
 }
-.category-new-row {
-  display: flex;
-  gap: 6px;
-  margin-top: 6px;
+.field label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 5px;
 }
-.category-new-row input {
-  flex: 1;
+.field .required { color: var(--red); }
+.field input,
+.field textarea {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--transition), background var(--transition);
 }
-.category-hint {
-  font-size: 0.72rem;
+.field input:focus,
+.field textarea:focus {
+  border-color: var(--accent);
+  background: var(--bg-secondary);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+.field input::placeholder,
+.field textarea::placeholder { color: var(--text-tertiary); }
+.field textarea { resize: vertical; min-height: 44px; }
+
+/* 坐标行 */
+.coord-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.coord-input {
+  position: relative;
+}
+.coord-input input {
+  width: 100%;
+  padding: 9px 12px 9px 26px;
+  background: var(--bg-tertiary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--transition), background var(--transition);
+}
+.coord-input input:focus {
+  border-color: var(--accent);
+  background: var(--bg-secondary);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+.coord-input input::placeholder { color: var(--text-tertiary); }
+.coord-label {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.68rem;
+  font-weight: 600;
   color: var(--text-tertiary);
-  margin-top: 3px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 分类下拉 */
+.category-wrap { position: relative; }
+.category-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  z-index: 10;
+  max-height: 160px;
+  overflow-y: auto;
+  margin-top: 2px;
+}
+.category-option {
+  padding: 7px 12px;
+  font-size: 0.84rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background var(--transition);
+}
+.category-option:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+.cat-count {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+
+/* 底部操作栏 */
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--border);
 }
 </style>
