@@ -333,27 +333,15 @@ select option {
   color: var(--text);
 }
 
-.dimension-badge {
+.category-badge {
   font-size: 0.68rem;
   padding: 2px 8px;
   border-radius: 6px;
   white-space: nowrap;
   flex-shrink: 0;
   font-weight: 500;
-  letter-spacing: 0.01em;
-}
-
-.dimension-overworld {
-  background: var(--dim-overworld-bg);
-  color: var(--dim-overworld);
-}
-.dimension-nether {
-  background: var(--dim-nether-bg);
-  color: var(--dim-nether);
-}
-.dimension-end {
-  background: var(--dim-end-bg);
-  color: var(--dim-end);
+  background: var(--accent-subtle);
+  color: var(--accent);
 }
 
 .coord-card-coords {

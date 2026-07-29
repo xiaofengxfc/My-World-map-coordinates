@@ -11,24 +11,19 @@
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-          <input
-            type="text"
-            v-model="searchQuery"
-            placeholder="搜索坐标..."
-            @input="debounceSearch"
-          />
+          <input type="text" v-model="searchQuery" placeholder="搜索坐标..." />
         </div>
-        <select v-model="dimensionFilter">
-          <option value="all">所有维度</option>
-          <option value="overworld">🌳 主世界</option>
-          <option value="nether">🔥 下界</option>
-          <option value="end">🌌 末地</option>
-        </select>
         <select v-model="sortBy">
           <option value="newest">🕐 最新</option>
           <option value="oldest">🕐 最旧</option>
           <option value="name">🔤 名称 A-Z</option>
           <option value="name-desc">🔤 名称 Z-A</option>
+        </select>
+        <select v-if="allCategories.length > 0" v-model="categoryFilter">
+          <option value="">全部分类</option>
+          <option v-for="c in allCategories" :key="c.category" :value="c.category">
+            {{ c.category }} ({{ c.count }})
+          </option>
         </select>
         <button class="btn btn-primary" @click="handleOpenAdd">＋ 添加</button>
       </div>
@@ -50,6 +45,7 @@
       v-if="showForm"
       :form="form"
       :editingId="editingId"
+      :allCategories="allCategories"
       @close="showForm = false"
       @save="handleSave"
     />
@@ -81,7 +77,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import CoordList from './components/CoordList.vue'
 import CoordForm from './components/CoordForm.vue'
 import { useCoords } from './composables/useCoords.js'
@@ -89,14 +85,16 @@ import { useToast } from './composables/useToast.js'
 
 const {
   filteredLocations,
+  categories,
   loading,
   searchQuery,
   sortBy,
-  dimensionFilter,
+  categoryFilter,
   form,
   editingId,
   totalCount,
   loadLocations,
+  loadCategories,
   openAddForm,
   openEditForm,
   saveLocation,
@@ -105,26 +103,19 @@ const {
 
 const { toasts, showToast } = useToast()
 
-// ---- 模态框状态 ----
-
 const showForm = ref(false)
 const showDeleteConfirm = ref(false)
 const deletingId = ref(null)
 const deletingName = ref('')
 
-// ---- 搜索防抖 ----
-let searchTimer = null
-function debounceSearch() {
-  clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => {}, 10)
+const allCategories = ref([])
+
+// 同步分类数据
+async function refreshCategories() {
+  await loadCategories()
+  allCategories.value = categories.value
 }
 
-// ---- 筛选/排序变化时重新过滤 ----
-watch([sortBy, dimensionFilter, searchQuery], () => {
-  // 由 computed 自动处理
-})
-
-// ---- 操作函数 ----
 function handleOpenAdd() {
   openAddForm()
   showForm.value = true
@@ -140,6 +131,7 @@ async function handleSave(data) {
   const ok = await saveLocation()
   if (ok) {
     showForm.value = false
+    await refreshCategories()
     showToast(editingId.value ? '✅ 坐标已更新' : '✅ 坐标已添加')
   }
 }
@@ -155,11 +147,12 @@ function handleDelete(id) {
 async function confirmDelete() {
   await removeLocation(deletingId.value)
   showDeleteConfirm.value = false
+  await refreshCategories()
   showToast('🗑️ 坐标已删除')
 }
 
-// ---- 初始化 ----
-onMounted(() => {
-  loadLocations()
+onMounted(async () => {
+  await loadLocations()
+  await refreshCategories()
 })
 </script>

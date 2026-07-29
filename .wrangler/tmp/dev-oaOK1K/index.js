@@ -34,14 +34,14 @@ var worker_default = {
     try {
       if (method === "GET" && path === "/api/locations") {
         const search = url.searchParams.get("search") || "";
-        const dimension = url.searchParams.get("dimension") || "all";
+        const category = url.searchParams.get("category") || "";
         const sort = url.searchParams.get("sort") || "newest";
         let sql = "SELECT * FROM locations";
         const conditions = [];
         const params = [];
-        if (dimension && dimension !== "all") {
-          conditions.push("dimension = ?");
-          params.push(dimension);
+        if (category) {
+          conditions.push("category = ?");
+          params.push(category);
         }
         if (search) {
           conditions.push("(name LIKE ? OR description LIKE ?)");
@@ -65,6 +65,12 @@ var worker_default = {
         const { results } = await db.prepare(sql).bind(...params).all();
         return json(results);
       }
+      if (method === "GET" && path === "/api/categories") {
+        const { results } = await db.prepare(
+          "SELECT category, COUNT(*) as count FROM locations WHERE category != '' GROUP BY category ORDER BY category ASC"
+        ).all();
+        return json(results);
+      }
       if (method === "GET" && path.startsWith("/api/locations/")) {
         const id = path.split("/").pop();
         const result = await db.prepare("SELECT * FROM locations WHERE id = ?").bind(id).first();
@@ -73,16 +79,13 @@ var worker_default = {
       }
       if (method === "POST" && path === "/api/locations") {
         const body = await request.json();
-        const { name, dimension, x, y, z, description } = body;
+        const { name, category, x, y, z, description } = body;
         if (!name || !name.trim()) return json({ error: "\u540D\u79F0\u4E0D\u80FD\u4E3A\u7A7A" }, 400);
-        if (!["overworld", "nether", "end"].includes(dimension)) {
-          return json({ error: "\u7EF4\u5EA6\u65E0\u6548" }, 400);
-        }
         const now = Date.now();
         const loc = {
           id: generateId(),
           name: name.trim(),
-          dimension,
+          category: (category || "").trim(),
           x: parseFloat(x) || 0,
           y: y !== void 0 && y !== "" ? parseFloat(y) : 64,
           z: parseFloat(z) || 0,
@@ -91,8 +94,8 @@ var worker_default = {
           updated_at: now
         };
         await db.prepare(
-          "INSERT INTO locations (id, name, dimension, x, y, z, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        ).bind(loc.id, loc.name, loc.dimension, loc.x, loc.y, loc.z, loc.description, loc.created_at, loc.updated_at).run();
+          "INSERT INTO locations (id, name, category, x, y, z, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        ).bind(loc.id, loc.name, loc.category, loc.x, loc.y, loc.z, loc.description, loc.created_at, loc.updated_at).run();
         return json(loc, 201);
       }
       if (method === "PUT" && path.startsWith("/api/locations/")) {
@@ -101,10 +104,10 @@ var worker_default = {
         if (!existing) return json({ error: "\u672A\u627E\u5230" }, 404);
         const body = await request.json();
         await db.prepare(
-          "UPDATE locations SET name = ?, dimension = ?, x = ?, y = ?, z = ?, description = ?, updated_at = ? WHERE id = ?"
+          "UPDATE locations SET name = ?, category = ?, x = ?, y = ?, z = ?, description = ?, updated_at = ? WHERE id = ?"
         ).bind(
           body.name !== void 0 ? body.name.trim() : existing.name,
-          body.dimension !== void 0 ? body.dimension : existing.dimension,
+          body.category !== void 0 ? (body.category || "").trim() : existing.category,
           body.x !== void 0 ? parseFloat(body.x) : existing.x,
           body.y !== void 0 ? body.y !== "" ? parseFloat(body.y) : 64 : existing.y,
           body.z !== void 0 ? parseFloat(body.z) : existing.z,
@@ -174,7 +177,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-OcdNm8/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-67HE4c/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -206,7 +209,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-OcdNm8/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-67HE4c/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

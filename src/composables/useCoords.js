@@ -1,8 +1,5 @@
 import { ref, computed } from 'vue'
 
-// API 基础路径
-// 通过 Pages Functions (/functions/api/[[path]].js) 代理到 Worker
-// 无需设置 VITE_API_URL 环境变量
 const API_BASE = '/api'
 
 async function api(path, options = {}) {
@@ -19,15 +16,16 @@ async function api(path, options = {}) {
 
 export function useCoords() {
   const locations = ref([])
+  const categories = ref([])
   const loading = ref(true)
   const searchQuery = ref('')
   const sortBy = ref('newest')
-  const dimensionFilter = ref('all')
+  const categoryFilter = ref('')
   const editingId = ref(null)
 
   const form = ref({
     name: '',
-    dimension: 'overworld',
+    category: '',
     x: 0,
     y: 64,
     z: 0,
@@ -35,7 +33,6 @@ export function useCoords() {
   })
 
   const filteredLocations = computed(() => {
-    // 前端再做一遍客户端过滤，但主要依赖后端 API
     let list = locations.value
 
     if (searchQuery.value) {
@@ -47,8 +44,8 @@ export function useCoords() {
       )
     }
 
-    if (dimensionFilter.value && dimensionFilter.value !== 'all') {
-      list = list.filter(l => l.dimension === dimensionFilter.value)
+    if (categoryFilter.value) {
+      list = list.filter(l => l.category === categoryFilter.value)
     }
 
     const sorted = [...list]
@@ -73,9 +70,9 @@ export function useCoords() {
     try {
       const params = new URLSearchParams({
         sort: sortBy.value,
-        dimension: dimensionFilter.value,
         search: searchQuery.value,
       })
+      if (categoryFilter.value) params.set('category', categoryFilter.value)
       locations.value = await api(`/locations?${params}`)
     } catch (err) {
       console.error('加载坐标失败:', err)
@@ -85,11 +82,19 @@ export function useCoords() {
     }
   }
 
+  async function loadCategories() {
+    try {
+      categories.value = await api('/categories')
+    } catch {
+      categories.value = []
+    }
+  }
+
   function openAddForm() {
     editingId.value = null
     form.value = {
       name: '',
-      dimension: 'overworld',
+      category: '',
       x: 0,
       y: 64,
       z: 0,
@@ -101,7 +106,7 @@ export function useCoords() {
     editingId.value = loc.id
     form.value = {
       name: loc.name,
-      dimension: loc.dimension,
+      category: loc.category || '',
       x: loc.x,
       y: loc.y,
       z: loc.z,
@@ -126,6 +131,7 @@ export function useCoords() {
         })
       }
       await loadLocations()
+      await loadCategories()
       return true
     } catch (err) {
       console.error('保存坐标失败:', err)
@@ -137,6 +143,7 @@ export function useCoords() {
     try {
       await api(`/locations/${id}`, { method: 'DELETE' })
       await loadLocations()
+      await loadCategories()
     } catch (err) {
       console.error('删除坐标失败:', err)
     }
@@ -144,15 +151,17 @@ export function useCoords() {
 
   return {
     locations,
+    categories,
     filteredLocations,
     loading,
     searchQuery,
     sortBy,
-    dimensionFilter,
+    categoryFilter,
     form,
     editingId,
     totalCount,
     loadLocations,
+    loadCategories,
     openAddForm,
     openEditForm,
     saveLocation,

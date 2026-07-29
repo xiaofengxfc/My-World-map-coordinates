@@ -9,9 +9,7 @@
       >
         <div class="coord-card-header">
           <span class="coord-card-name">{{ loc.name }}</span>
-          <span class="dimension-badge" :class="'dimension-' + loc.dimension">
-            {{ dimIcon(loc.dimension) }} {{ dimName(loc.dimension) }}
-          </span>
+          <span v-if="loc.category" class="category-badge">{{ loc.category }}</span>
         </div>
         <div class="coord-card-coords">
           <span>X <span class="coord-value">{{ loc.x }}</span></span>
@@ -51,24 +49,6 @@ const emit = defineEmits(['edit', 'delete'])
 
 const copiedId = ref(null)
 
-function dimIcon(dim) {
-  switch (dim) {
-    case 'overworld': return '🌳'
-    case 'nether': return '🔥'
-    case 'end': return '🌌'
-    default: return '❓'
-  }
-}
-
-function dimName(dim) {
-  switch (dim) {
-    case 'overworld': return '主世界'
-    case 'nether': return '下界'
-    case 'end': return '末地'
-    default: return '未知'
-  }
-}
-
 function relativeTime(ts) {
   const diff = Date.now() - ts
   const mins = Math.floor(diff / 60000)
@@ -91,3 +71,16 @@ function copyTP(loc) {
   }).catch(() => {})
 }
 </script>
+
+<style scoped>
+.category-badge {
+  font-size: 0.68rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-weight: 500;
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+</style>

@@ -1,7 +1,7 @@
 /**
  * Cloudflare Worker — 坐标管理 API
  *
- * 静态文件由 wrangler assets 托管（见 wrangler.jsonc）
+ * 静态文件由 wrangler assets 托管
  * 本 Worker 仅处理 /api/* 路由
  */
 
@@ -27,7 +27,6 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url)
 
-    // 非 API 路由由 wrangler assets 处理，不会走到这里
     if (!url.pathname.startsWith('/api/')) {
       return new Response('Not Found', { status: 404 })
     }
@@ -45,16 +44,16 @@ export default {
       // GET /api/locations
       if (method === 'GET' && path === '/api/locations') {
         const search = url.searchParams.get('search') || ''
-        const dimension = url.searchParams.get('dimension') || 'all'
+        const category = url.searchParams.get('category') || ''
         const sort = url.searchParams.get('sort') || 'newest'
 
         let sql = 'SELECT * FROM locations'
         const conditions = []
         const params = []
 
-        if (dimension && dimension !== 'all') {
-          conditions.push('dimension = ?')
-          params.push(dimension)
+        if (category) {
+          conditions.push('category = ?')
+          params.push(category)
         }
 
         if (search) {
@@ -76,6 +75,14 @@ export default {
         return json(results)
       }
 
+      // GET /api/categories — 获取所有分类列表
+      if (method === 'GET' && path === '/api/categories') {
+        const { results } = await db.prepare(
+          "SELECT category, COUNT(*) as count FROM locations WHERE category != '' GROUP BY category ORDER BY category ASC"
+        ).all()
+        return json(results)
+      }
+
       // GET /api/locations/:id
       if (method === 'GET' && path.startsWith('/api/locations/')) {
         const id = path.split('/').pop()
@@ -87,18 +94,15 @@ export default {
       // POST /api/locations
       if (method === 'POST' && path === '/api/locations') {
         const body = await request.json()
-        const { name, dimension, x, y, z, description } = body
+        const { name, category, x, y, z, description } = body
 
         if (!name || !name.trim()) return json({ error: '名称不能为空' }, 400)
-        if (!['overworld', 'nether', 'end'].includes(dimension)) {
-          return json({ error: '维度无效' }, 400)
-        }
 
         const now = Date.now()
         const loc = {
           id: generateId(),
           name: name.trim(),
-          dimension,
+          category: (category || '').trim(),
           x: parseFloat(x) || 0,
           y: y !== undefined && y !== '' ? parseFloat(y) : 64,
           z: parseFloat(z) || 0,
@@ -108,8 +112,8 @@ export default {
         }
 
         await db.prepare(
-          'INSERT INTO locations (id, name, dimension, x, y, z, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        ).bind(loc.id, loc.name, loc.dimension, loc.x, loc.y, loc.z, loc.description, loc.created_at, loc.updated_at).run()
+          'INSERT INTO locations (id, name, category, x, y, z, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        ).bind(loc.id, loc.name, loc.category, loc.x, loc.y, loc.z, loc.description, loc.created_at, loc.updated_at).run()
 
         return json(loc, 201)
       }
@@ -122,10 +126,10 @@ export default {
 
         const body = await request.json()
         await db.prepare(
-          'UPDATE locations SET name = ?, dimension = ?, x = ?, y = ?, z = ?, description = ?, updated_at = ? WHERE id = ?'
+          'UPDATE locations SET name = ?, category = ?, x = ?, y = ?, z = ?, description = ?, updated_at = ? WHERE id = ?'
         ).bind(
           body.name !== undefined ? body.name.trim() : existing.name,
-          body.dimension !== undefined ? body.dimension : existing.dimension,
+          body.category !== undefined ? (body.category || '').trim() : existing.category,
           body.x !== undefined ? parseFloat(body.x) : existing.x,
           body.y !== undefined ? (body.y !== '' ? parseFloat(body.y) : 64) : existing.y,
           body.z !== undefined ? parseFloat(body.z) : existing.z,

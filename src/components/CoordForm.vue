@@ -35,12 +35,23 @@
         </div>
 
         <div class="form-group">
-          <label for="dimension">维度 <span class="required">*</span></label>
-          <select id="dimension" v-model="localForm.dimension">
-            <option value="overworld">🌳 主世界</option>
-            <option value="nether">🔥 下界</option>
-            <option value="end">🌌 末地</option>
-          </select>
+          <label for="category">分类</label>
+          <div class="category-input-group">
+            <input
+              id="category"
+              v-model="localForm.category"
+              type="text"
+              placeholder="未分类 — 输入新建或选择已有"
+              maxlength="20"
+              list="categorySuggestions"
+              @input="filterSuggestions"
+              @focus="showSuggestions = true"
+            />
+            <datalist id="categorySuggestions">
+              <option v-for="c in allCategories" :key="c.category" :value="c.category" />
+            </datalist>
+          </div>
+          <div class="category-hint">留空为未分类，输入新名称自动创建分类</div>
         </div>
 
         <div class="form-group">
@@ -52,6 +63,18 @@
             placeholder="坐标描述、注意事项..."
             maxlength="200"
           ></textarea>
+        </div>
+
+        <div class="category-tags" v-if="allCategories.length > 0">
+          <span
+            v-for="c in allCategories"
+            :key="c.category"
+            class="category-tag"
+            :class="{ active: localForm.category === c.category }"
+            @click="localForm.category = localForm.category === c.category ? '' : c.category"
+          >
+            {{ c.category }}
+          </span>
         </div>
 
         <div class="form-actions">
@@ -71,15 +94,17 @@ import { ref, reactive, watch, nextTick } from 'vue'
 const props = defineProps({
   form: { type: Object, required: true },
   editingId: { type: [String, null], default: null },
+  allCategories: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['close', 'save'])
 
 const nameInput = ref(null)
+const showSuggestions = ref(false)
 
 const localForm = reactive({
   name: '',
-  dimension: 'overworld',
+  category: '',
   x: 0,
   y: 64,
   z: 0,
@@ -102,8 +127,49 @@ watch(
   { immediate: true }
 )
 
+function filterSuggestions() {}
+
 function handleSubmit() {
   if (!localForm.name.trim()) return
   emit('save', { ...localForm })
 }
 </script>
+
+<style scoped>
+.category-input-group {
+  position: relative;
+}
+.category-input-group input {
+  width: 100%;
+}
+.category-hint {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  margin-top: 3px;
+}
+.category-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.category-tag {
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+}
+.category-tag:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.category-tag.active {
+  background: var(--accent);
+  color: var(--text-inverse);
+  border-color: var(--accent);
+}
+</style>
