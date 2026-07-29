@@ -1,9 +1,9 @@
 name = "my-world-map-coordinates"
-main = "index.js"
+main = "worker/index.js"
 compatibility_date = "2025-04-01"
 
-# 静态文件由 wrangler assets 托管
-# 在根目录已自动生成 wrangler.jsonc，包含 SPA fallback 配置
+# 静态文件托管
+assets = { directory = "./dist", not_found_handling = "single-page-application" }
 
 # D1 数据库
 [[d1_databases]]

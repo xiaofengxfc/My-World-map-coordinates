@@ -17,6 +17,7 @@
 ```
 ├── index.html              # Vite 入口
 ├── vite.config.js           # Vite 配置（dev proxy → Worker）
+├── wrangler.toml           # Worker 配置（D1 + assets）
 ├── public/
 │   └── _headers             # 安全响应头
 ├── src/
@@ -31,7 +32,6 @@
 │       └── useToast.js      # Toast 通知
 ├── worker/
 │   ├── index.js             # Worker API（/api/* → D1）
-│   ├── wrangler.toml        # D1 数据库配置
 │   └── schema.sql           # 表结构
 ├── dist/                    # 前端构建产物
 └── package.json             # 前端依赖
@@ -102,20 +102,23 @@ database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
 ### 2. 配置 wrangler.toml
 
-将 `database_id` 填入 `worker/wrangler.toml`：
+将 `database_id` 填入根目录的 `wrangler.toml`：
 
 ```toml
+# wrangler.toml（项目根目录）
 name = "my-world-map-coordinates"
-main = "index.js"
+main = "worker/index.js"
 compatibility_date = "2025-04-01"
 
+# 静态文件托管（含 SPA 回退）
+assets = { directory = "./dist", not_found_handling = "single-page-application" }
+
+# D1 数据库
 [[d1_databases]]
 binding = "DB"
 database_name = "mc-coords"
 database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 ```
-
-> 静态文件由 wrangler 自动托管，`wrangler.jsonc` 会在首次 `wrangler deploy` 时自动生成，包含 SPA 回退配置。无需手动创建 `_redirects` 文件。
 
 ### 3. 初始化表结构
 
