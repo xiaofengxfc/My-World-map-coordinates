@@ -78,7 +78,7 @@
             <div class="category-wrap">
               <input id="categoryInput" v-model="localForm.category" type="text"
                 placeholder="未分类 — 输入新建或选择已有" maxlength="20"
-                @focus="showDropdown = true" @blur="onBlur" @input="showDropdown = true"
+                @focus="openDropdown" @blur="onBlur" @input="openDropdown" @click="openDropdown"
                 ref="categoryInput" autocomplete="off" />
               <div class="category-dropdown" v-if="showDropdown && filteredCategories.length > 0">
                 <div v-for="c in filteredCategories" :key="c.category" class="category-option"
@@ -149,11 +149,7 @@ const localForm = reactive({
   link_title: '',
 })
 
-const filteredCategories = computed(() => {
-  const q = localForm.category.toLowerCase()
-  if (!q) return props.allCategories
-  return props.allCategories.filter(c => c.category.toLowerCase().includes(q))
-})
+const filteredCategories = computed(() => props.allCategories)
 
 watch(() => props.form, (val) => { Object.assign(localForm, val) }, { immediate: true, deep: true })
 watch(() => props.editingId, () => { nextTick(() => nameInput.value?.focus()) }, { immediate: true })
@@ -170,8 +166,20 @@ function autoCalcNether() {
   }
 }
 
-function selectCategory(name) { localForm.category = name; showDropdown.value = false }
-function onBlur() { setTimeout(() => { showDropdown.value = false }, 150) }
+let blurTimer = null
+function openDropdown() {
+  clearTimeout(blurTimer)
+  showDropdown.value = true
+}
+function selectCategory(name) {
+  localForm.category = name
+  showDropdown.value = false
+  clearTimeout(blurTimer)
+}
+function onBlur() {
+  clearTimeout(blurTimer)
+  blurTimer = setTimeout(() => { showDropdown.value = false }, 150)
+}
 
 let linkPasteTimer = null
 function onLinkPaste() {
