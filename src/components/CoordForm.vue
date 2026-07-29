@@ -110,7 +110,7 @@ const localForm = reactive({
   name: '',
   category: '',
   x: 0,
-  y: 64,
+  y: '',
   z: 0,
   description: '',
 })
