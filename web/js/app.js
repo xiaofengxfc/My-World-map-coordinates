@@ -28,7 +28,7 @@ const App = {
     this._setupFileImport();
     this._setupConverter();
     this._renderAll();
-    showToast('欢迎使用坐标记录工具！', 'info', 2000);
+    showToast('欢迎使用坐标记录工具', 'info', 1500);
   },
 
   // ---- 注册 Service Worker ----
@@ -509,7 +509,7 @@ const App = {
             <div class="coord-card-meta">
               <span class="coord-card-world">${world.icon} ${this._escapeHtml(world.name)}</span>
               ${cat ? `<span class="coord-card-category"><span style="color:${cat.color}">●</span> ${cat.icon || ''} ${this._escapeHtml(cat.name)}</span>` : ''}
-              <span>🕐 ${relativeTime(l.createdAt)}</span>
+              <span class="coord-card-time">🕐 ${relativeTime(l.createdAt)}</span>
             </div>
             ${l.description ? `<div class="coord-card-desc">${this._escapeHtml(l.description)}</div>` : ''}
             <div class="coord-card-actions">
@@ -528,7 +528,7 @@ const App = {
         const dimColor = l.dimension === 'overworld' ? 'var(--dimension-overworld)' : l.dimension === 'nether' ? 'var(--dimension-nether)' : 'var(--dimension-end)';
         html += `
           <div class="coord-list-item" data-id="${l.id}">
-            <span class="list-dimension" style="background:${dimColor}"></span>
+            <span class="list-indicator" style="background:${dimColor}"></span>
             <span class="list-name">${this._escapeHtml(l.name)}</span>
             <span class="list-coords">${dimensionIcon(l.dimension)} X:${l.x} Y:${l.y} Z:${l.z}</span>
             ${cat ? `<span class="list-category" style="background:${cat.color}22;color:${cat.color}">${cat.icon || ''} ${this._escapeHtml(cat.name)}</span>` : ''}
