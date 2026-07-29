@@ -188,8 +188,8 @@ CREATE INDEX IF NOT EXISTS idx_locations_created_at ON locations(created_at);
 ### 4. 构建 + 部署
 
 ```bash
-npm run build
-npx.cmd wrangler deploy
+npm run deploy
 ```
 
+> 等效于 `npm run build && wrangler deploy`。wrangler 已预装在 `devDependencies` 中，无需 `npx`。
 > Worker 首次请求时自动执行数据库迁移（`ALTER TABLE ADD COLUMN`），补齐缺失字段，无需手动更新旧表。
