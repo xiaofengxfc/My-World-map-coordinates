@@ -1,9 +1,9 @@
 <template>
-  <div class="modal-overlay" @click.self="$emit('close')">
-    <div class="modal">
+  <div class="modal-overlay" @mousedown="onOverlayClick" @touchstart="onOverlayClick">
+    <div class="modal" @mousedown.stop @touchstart.stop>
       <div class="modal-header">
         <h2>{{ editingId ? '编辑坐标' : '添加坐标' }}</h2>
-        <button class="btn-icon modal-close" @click="$emit('close')">&times;</button>
+        <button class="btn-icon modal-close" type="button" @click="$emit('close')">&times;</button>
       </div>
       <form class="modal-body" @submit.prevent="handleSubmit">
         <div class="form-group">
@@ -35,23 +35,36 @@
         </div>
 
         <div class="form-group">
-          <label for="category">分类</label>
-          <div class="category-input-group">
-            <input
-              id="category"
-              v-model="localForm.category"
-              type="text"
-              placeholder="未分类 — 输入新建或选择已有"
-              maxlength="20"
-              list="categorySuggestions"
-              @input="filterSuggestions"
-              @focus="showSuggestions = true"
-            />
-            <datalist id="categorySuggestions">
-              <option v-for="c in allCategories" :key="c.category" :value="c.category" />
-            </datalist>
+          <label>分类</label>
+          <div class="category-select-row">
+            <select :value="localForm.category" @change="onCategorySelect">
+              <option value="">未分类</option>
+              <option
+                v-for="c in allCategories"
+                :key="c.category"
+                :value="c.category"
+              >{{ c.category }} ({{ c.count }})</option>
+              <!-- 新建的分类临时加入选项 -->
+              <option v-if="pendingNewCat && !isInAllCategories" :value="pendingNewCat">
+                {{ pendingNewCat }}（新建）
+              </option>
+            </select>
+            <button type="button" class="btn btn-sm btn-outline" @click="toggleNewInput">
+              {{ showNewInput ? '取消' : '＋新建' }}
+            </button>
           </div>
-          <div class="category-hint">留空为未分类，输入新名称自动创建分类</div>
+          <div class="category-new-row" v-if="showNewInput">
+            <input
+              v-model="newCategoryName"
+              type="text"
+              placeholder="输入新分类名称..."
+              maxlength="20"
+              ref="newCatInput"
+              @keyup.enter="confirmNewCategory"
+            />
+            <button type="button" class="btn btn-sm btn-primary" @click="confirmNewCategory">确定</button>
+          </div>
+          <div class="category-hint">未选择即为「未分类」</div>
         </div>
 
         <div class="form-group">
@@ -63,18 +76,6 @@
             placeholder="坐标描述、注意事项..."
             maxlength="200"
           ></textarea>
-        </div>
-
-        <div class="category-tags" v-if="allCategories.length > 0">
-          <span
-            v-for="c in allCategories"
-            :key="c.category"
-            class="category-tag"
-            :class="{ active: localForm.category === c.category }"
-            @click="localForm.category = localForm.category === c.category ? '' : c.category"
-          >
-            {{ c.category }}
-          </span>
         </div>
 
         <div class="form-actions">
@@ -89,7 +90,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, nextTick } from 'vue'
+import { ref, reactive, watch, nextTick, computed } from 'vue'
 
 const props = defineProps({
   form: { type: Object, required: true },
@@ -100,7 +101,10 @@ const props = defineProps({
 const emit = defineEmits(['close', 'save'])
 
 const nameInput = ref(null)
-const showSuggestions = ref(false)
+const newCatInput = ref(null)
+const showNewInput = ref(false)
+const newCategoryName = ref('')
+const pendingNewCat = ref('')
 
 const localForm = reactive({
   name: '',
@@ -110,6 +114,11 @@ const localForm = reactive({
   z: 0,
   description: '',
 })
+
+// 新建的分类是否已存在于已有分类列表中
+const isInAllCategories = computed(() =>
+  props.allCategories.some(c => c.category === pendingNewCat.value)
+)
 
 watch(
   () => props.form,
@@ -127,7 +136,33 @@ watch(
   { immediate: true }
 )
 
-function filterSuggestions() {}
+function onCategorySelect(e) {
+  localForm.category = e.target.value
+}
+
+function toggleNewInput() {
+  showNewInput.value = !showNewInput.value
+  if (showNewInput.value) {
+    nextTick(() => newCatInput.value?.focus())
+  }
+}
+
+function confirmNewCategory() {
+  const name = newCategoryName.value.trim()
+  if (name) {
+    localForm.category = name
+    pendingNewCat.value = name
+  }
+  showNewInput.value = false
+  newCategoryName.value = ''
+}
+
+function onOverlayClick(e) {
+  // 仅当点击目标就是 overlay 背景本身时才关闭（不是其子元素）
+  if (e.currentTarget === e.target) {
+    emit('close')
+  }
+}
 
 function handleSubmit() {
   if (!localForm.name.trim()) return
@@ -136,40 +171,24 @@ function handleSubmit() {
 </script>
 
 <style scoped>
-.category-input-group {
-  position: relative;
+.category-select-row {
+  display: flex;
+  gap: 6px;
 }
-.category-input-group input {
-  width: 100%;
+.category-select-row select {
+  flex: 1;
+}
+.category-new-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.category-new-row input {
+  flex: 1;
 }
 .category-hint {
   font-size: 0.72rem;
   color: var(--text-tertiary);
   margin-top: 3px;
-}
-.category-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 14px;
-}
-.category-tag {
-  font-size: 0.75rem;
-  padding: 3px 10px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  cursor: pointer;
-  color: var(--text-secondary);
-  transition: all var(--transition);
-}
-.category-tag:hover {
-  border-color: var(--accent);
-  color: var(--text);
-}
-.category-tag.active {
-  background: var(--accent);
-  color: var(--text-inverse);
-  border-color: var(--accent);
 }
 </style>
