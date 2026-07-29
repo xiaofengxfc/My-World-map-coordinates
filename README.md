@@ -126,19 +126,41 @@ npx wrangler deploy
 
 **方式一：连接 Git 仓库**
 
-在 Cloudflare Pages 控制台添加项目，配置：
+在 Cloudflare Pages 控制台添加项目：
+
+1. **Framework preset** 选择 **Vue**（自动填写构建命令和输出目录）
+2. 确认构建配置：
 
 | 配置 | 值 |
 |------|-----|
-| 构建命令 | `npm run build` |
-| 输出目录 | `dist` |
-| 环境变量 | `VITE_API_URL` = Worker 域名 |
+| Build command | `npm run build` |
+| Build output directory | `dist` |
+
+3. **添加 D1 数据库绑定**（关键步骤，否则 Worker 无法访问数据库）：
+
+   进入 Pages 项目 → **Settings** → **Functions** → **D1 database bindings**：
+
+   | 字段 | 值 |
+   |------|-----|
+   | **Variable name** | `DB` |
+   | **D1 database** | 选择 `mc-coords` |
+
+   > `Variable name` 必须为 `DB`，与 `worker/wrangler.toml` 中的 `binding = "DB"` 一致，Worker 代码通过 `env.DB` 访问数据库。
+
+4. 添加环境变量：
+
+   进入 Pages 项目 → **Settings** → **Environment variables**：
+
+   | 变量名 | 值 |
+   |-------|-----|
+   | `VITE_API_URL` | Worker 域名（如 `https://mc-coords-api.xxxxx.workers.dev`） |
 
 **方式二：上传 dist 目录**
 
 ```bash
 npm run build
 # 将 dist/ 目录上传到 Cloudflare Pages
+# 仍需按方式一第 3、4 步配置 D1 binding 和环境变量
 ```
 
 ## API 接口
