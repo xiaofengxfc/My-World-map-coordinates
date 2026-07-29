@@ -17,7 +17,8 @@
 ```
 ├── index.html              # Vite 入口
 ├── vite.config.js           # Vite 配置（dev proxy → Worker）
-├── wrangler.toml           # Worker 配置（D1 + assets）
+├── wrangler.toml           # Worker 配置（部署用：D1 + assets）
+├── wrangler.dev.toml       # Worker 配置（本地开发用：本地 SQLite）
 ├── public/
 │   └── _headers             # 安全响应头
 ├── src/
@@ -56,29 +57,28 @@
 
 ## 本地开发
 
-### 1. 配置 Worker proxy
+### 1. 启动本地 Worker API
 
-修改 `vite.config.js`，将 proxy target 指向你的线上 Worker：
-
-```js
-server: {
-  proxy: {
-    '/api': {
-      target: 'https://mc-coords.xxx.workers.dev',
-      changeOrigin: true,
-    },
-  },
-}
+```bash
+# 启动 Worker（端口 8787，使用本地 SQLite 数据库）
+cd worker
+npx.cmd wrangler dev --config ../wrangler.dev.toml
 ```
 
-### 2. 启动前端
+首次启动后，在另一个终端初始化本地数据库表结构：
+
+```bash
+npx.cmd wrangler d1 execute mc-coords --file=schema.sql --local
+```
+
+### 2. 启动前端（新开一个终端）
 
 ```bash
 npm install
 npm run dev
 ```
 
-前端运行在 `http://localhost:5173`，`/api/*` 请求自动转发到线上 Worker。
+前端运行在 `http://localhost:5173`，`/api/*` 请求通过 Vite proxy 转发到本地 Worker（`localhost:8787`）。
 
 ## 部署
 

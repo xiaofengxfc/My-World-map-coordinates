@@ -1,0 +1,9 @@
+name = "my-world-map-coordinates"
+main = "worker/index.js"
+compatibility_date = "2025-04-01"
+
+# 本地开发时，前端由 Vite 托管，不需要 assets 配置
+# D1 使用本地 SQLite（无需 database_id）
+[[d1_databases]]
+binding = "DB"
+database_name = "mc-coords"
