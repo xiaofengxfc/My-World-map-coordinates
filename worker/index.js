@@ -21,6 +21,20 @@ function parseCoord(val, fallback = null) {
   return parseFloat(val)
 }
 
+// ---- 数据库迁移：自动补齐缺失字段 ----
+let migrated = false
+async function runMigrations(db) {
+  if (migrated) return
+  migrated = true
+  const migrations = [
+    "ALTER TABLE locations ADD COLUMN link_url TEXT DEFAULT ''",
+    "ALTER TABLE locations ADD COLUMN link_title TEXT DEFAULT ''",
+  ]
+  for (const sql of migrations) {
+    try { await db.prepare(sql).run() } catch (e) { /* 列已存在，静默忽略 */ }
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url)
@@ -32,6 +46,8 @@ export default {
     if (method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS })
 
     const db = env.DB
+    // 自动迁移数据库（补齐缺失字段）
+    await runMigrations(db).catch(() => {})
 
     try {
       // GET /api/locations

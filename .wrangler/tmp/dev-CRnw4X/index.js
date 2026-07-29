@@ -24,6 +24,22 @@ function parseCoord(val, fallback = null) {
   return parseFloat(val);
 }
 __name(parseCoord, "parseCoord");
+var migrated = false;
+async function runMigrations(db) {
+  if (migrated) return;
+  migrated = true;
+  const migrations = [
+    "ALTER TABLE locations ADD COLUMN link_url TEXT DEFAULT ''",
+    "ALTER TABLE locations ADD COLUMN link_title TEXT DEFAULT ''"
+  ];
+  for (const sql of migrations) {
+    try {
+      await db.prepare(sql).run();
+    } catch (e) {
+    }
+  }
+}
+__name(runMigrations, "runMigrations");
 var worker_default = {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -32,6 +48,8 @@ var worker_default = {
     const method = request.method;
     if (method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
     const db = env.DB;
+    await runMigrations(db).catch(() => {
+    });
     try {
       if (method === "GET" && path === "/api/locations") {
         const search = url.searchParams.get("search") || "";
