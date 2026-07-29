@@ -96,9 +96,9 @@
               placeholder="备注、注意事项…" maxlength="200"></textarea>
           </div>
 
-          <!-- 使用文档 -->
+          <!-- 文档 -->
           <div class="field">
-            <label for="linkUrl">使用文档</label>
+            <label for="linkUrl">文档</label>
             <div class="link-row">
               <input id="linkUrl" v-model="localForm.link_url" type="url"
                 placeholder="腾讯文档链接…" maxlength="500" @blur="fetchLinkTitle" @paste="onLinkPaste" />
