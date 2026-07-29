@@ -117,14 +117,15 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, watch, nextTick, computed } from 'vue'
+import type { LocationForm, Category } from '../types'
 
-const props = defineProps({
-  form: { type: Object, required: true },
-  editingId: { type: [String, null], default: null },
-  allCategories: { type: Array, default: () => [] },
-})
+const props = defineProps<{
+  form: LocationForm
+  editingId: string | null
+  allCategories: Category[]
+}>()
 
 const emit = defineEmits(['close', 'save'])
 

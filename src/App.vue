@@ -76,12 +76,12 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import CoordList from './components/CoordList.vue'
 import CoordForm from './components/CoordForm.vue'
-import { useCoords } from './composables/useCoords.js'
-import { useToast } from './composables/useToast.js'
+import { useCoords } from './composables/useCoords'
+import { useToast } from './composables/useToast'
 
 const {
   filteredLocations,

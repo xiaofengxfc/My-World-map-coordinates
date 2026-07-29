@@ -42,11 +42,12 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
+import type { Location } from '../types'
 
-defineProps({ filteredLocations: { type: Array, required: true } })
-const emit = defineEmits(['edit', 'delete'])
+defineProps<{ filteredLocations: Location[] }>()
+const emit = defineEmits<{ (e: 'edit', loc: Location): void; (e: 'delete', id: string): void }>()
 
 function relativeTime(ts) {
   const diff = Date.now() - ts
