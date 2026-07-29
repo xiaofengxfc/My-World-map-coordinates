@@ -95,6 +95,17 @@
             <textarea id="desc" v-model="localForm.description" rows="2"
               placeholder="备注、注意事项…" maxlength="200"></textarea>
           </div>
+
+          <!-- 使用文档 -->
+          <div class="field">
+            <label for="linkUrl">使用文档</label>
+            <div class="link-row">
+              <input id="linkUrl" v-model="localForm.link_url" type="url"
+                placeholder="腾讯文档链接…" maxlength="500" @blur="fetchLinkTitle" @paste="onLinkPaste" />
+              <button type="button" class="btn btn-sm btn-outline" @click="openLink" :disabled="!localForm.link_url" title="打开链接">↗</button>
+            </div>
+            <div class="link-title" v-if="localForm.link_title">📄 {{ localForm.link_title }}</div>
+          </div>
         </div>
 
         <div class="form-actions">
@@ -134,6 +145,8 @@ const localForm = reactive({
   end_y: null,
   end_z: null,
   description: '',
+  link_url: '',
+  link_title: '',
 })
 
 const filteredCategories = computed(() => {
@@ -159,6 +172,27 @@ function autoCalcNether() {
 
 function selectCategory(name) { localForm.category = name; showDropdown.value = false }
 function onBlur() { setTimeout(() => { showDropdown.value = false }, 150) }
+
+let linkPasteTimer = null
+function onLinkPaste() {
+  clearTimeout(linkPasteTimer)
+  linkPasteTimer = setTimeout(() => fetchLinkTitle(), 300)
+}
+
+async function fetchLinkTitle() {
+  const url = localForm.link_url.trim()
+  if (!url) { localForm.link_title = ''; return }
+  try {
+    const res = await fetch(`/api/fetch-title?url=${encodeURIComponent(url)}`)
+    const data = await res.json()
+    if (data.title) localForm.link_title = data.title
+  } catch { /* 静默失败 */ }
+}
+
+function openLink() {
+  if (localForm.link_url) window.open(localForm.link_url, '_blank')
+}
+
 function handleSubmit() {
   if (!localForm.name.trim()) return
   emit('save', { ...localForm })
@@ -203,4 +237,8 @@ function handleSubmit() {
 .cat-count { font-size: 0.7rem; color: var(--text-tertiary); }
 
 .form-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 14px 20px 18px; border-top: 1px solid var(--border); }
+
+.link-row { display: flex; gap: 6px; }
+.link-row input { flex: 1; }
+.link-title { font-size: 0.78rem; color: var(--accent); margin-top: 4px; padding: 4px 8px; background: var(--accent-subtle); border-radius: var(--radius-sm); display: inline-block; }
 </style>

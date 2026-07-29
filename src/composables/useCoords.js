@@ -36,6 +36,8 @@ export function useCoords() {
     end_y: null,
     end_z: null,
     description: '',
+    link_url: '',
+    link_title: '',
   })
 
   const filteredLocations = computed(() => {
@@ -95,6 +97,8 @@ export function useCoords() {
       end_y: null,
       end_z: null,
       description: '',
+      link_url: '',
+      link_title: '',
     }
   }
 
@@ -113,6 +117,8 @@ export function useCoords() {
       end_y: loc.end_y,
       end_z: loc.end_z,
       description: loc.description || '',
+      link_url: loc.link_url || '',
+      link_title: loc.link_title || '',
     }
   }
 

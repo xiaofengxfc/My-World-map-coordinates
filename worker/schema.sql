@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS locations (
   end_z REAL,
 
   description TEXT DEFAULT '',
+  link_url TEXT DEFAULT '',
+  link_title TEXT DEFAULT '',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );

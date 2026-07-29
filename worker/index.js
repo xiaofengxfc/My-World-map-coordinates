@@ -72,6 +72,38 @@ export default {
         return json(results)
       }
 
+      // GET /api/fetch-title — 获取网页标题
+      if (method === 'GET' && path === '/api/fetch-title') {
+        let targetUrl = url.searchParams.get('url')
+        if (!targetUrl) return json({ title: '' })
+        targetUrl = targetUrl.trim().replace(/^(?!https?:\/\/)/i, 'https://')
+        try {
+          const res = await fetch(targetUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+            signal: AbortSignal.timeout(5000),
+          })
+          const html = await res.text()
+          // 尝试多种方式获取标题
+          let title = ''
+          const ogMatch = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)
+          if (ogMatch) title = ogMatch[1]
+          if (!title) {
+            const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i)
+            if (titleMatch) title = titleMatch[1].trim()
+          }
+          // 从 URL 文件名兜底
+          if (!title) {
+            const pathMatch = targetUrl.match(/\/([^\/?#]+)(?:[?#]|$)/)
+            if (pathMatch) title = decodeURIComponent(pathMatch[1])
+          }
+          return json({ title })
+        } catch {
+          // 获取失败时从 URL 提取文件名
+          const pathMatch = targetUrl.match(/\/([^\/?#]+)(?:[?#]|$)/)
+          return json({ title: pathMatch ? decodeURIComponent(pathMatch[1]) : '' })
+        }
+      }
+
       // GET /api/locations/:id
       if (method === 'GET' && path.startsWith('/api/locations/')) {
         const id = path.split('/').pop()
@@ -100,16 +132,18 @@ export default {
           end_y: parseCoord(body.end_y),
           end_z: parseCoord(body.end_z),
           description: (body.description || '').trim(),
+          link_url: (body.link_url || '').trim().replace(/^(?!https?:\/\/).+/i, (m) => 'https://' + m),
+          link_title: (body.link_title || '').trim(),
           created_at: now,
           updated_at: now,
         }
 
         await db.prepare(
-          `INSERT INTO locations (id, name, category, overworld_x, overworld_y, overworld_z, nether_x, nether_y, nether_z, end_x, end_y, end_z, description, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO locations (id, name, category, overworld_x, overworld_y, overworld_z, nether_x, nether_y, nether_z, end_x, end_y, end_z, description, link_url, link_title, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(loc.id, loc.name, loc.category, loc.overworld_x, loc.overworld_y, loc.overworld_z,
           loc.nether_x, loc.nether_y, loc.nether_z, loc.end_x, loc.end_y, loc.end_z,
-          loc.description, loc.created_at, loc.updated_at).run()
+          loc.description, loc.link_url, loc.link_title, loc.created_at, loc.updated_at).run()
 
         return json(loc, 201)
       }
@@ -126,7 +160,7 @@ export default {
           'overworld_x = ?', 'overworld_y = ?', 'overworld_z = ?',
           'nether_x = ?', 'nether_y = ?', 'nether_z = ?',
           'end_x = ?', 'end_y = ?', 'end_z = ?',
-          'description = ?', 'updated_at = ?'
+          'description = ?', 'link_url = ?', 'link_title = ?', 'updated_at = ?'
         ]
         const vals = [
           body.name !== undefined ? body.name.trim() : existing.name,
@@ -141,6 +175,8 @@ export default {
           body.end_y !== undefined ? parseCoord(body.end_y) : existing.end_y,
           body.end_z !== undefined ? parseCoord(body.end_z) : existing.end_z,
           body.description !== undefined ? (body.description || '').trim() : existing.description,
+          body.link_url !== undefined ? (body.link_url || '').trim().replace(/^(?!https?:\/\/).+/i, (m) => 'https://' + m) : existing.link_url,
+          body.link_title !== undefined ? (body.link_title || '').trim() : existing.link_title,
           Date.now(),
           id,
         ]

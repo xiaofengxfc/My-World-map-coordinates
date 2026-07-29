@@ -72,6 +72,33 @@ var worker_default = {
         ).all();
         return json(results);
       }
+      if (method === "GET" && path === "/api/fetch-title") {
+        let targetUrl = url.searchParams.get("url");
+        if (!targetUrl) return json({ title: "" });
+        targetUrl = targetUrl.trim().replace(/^(?!https?:\/\/)/i, "https://");
+        try {
+          const res = await fetch(targetUrl, {
+            headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+            signal: AbortSignal.timeout(5e3)
+          });
+          const html = await res.text();
+          let title = "";
+          const ogMatch = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
+          if (ogMatch) title = ogMatch[1];
+          if (!title) {
+            const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+            if (titleMatch) title = titleMatch[1].trim();
+          }
+          if (!title) {
+            const pathMatch = targetUrl.match(/\/([^\/?#]+)(?:[?#]|$)/);
+            if (pathMatch) title = decodeURIComponent(pathMatch[1]);
+          }
+          return json({ title });
+        } catch {
+          const pathMatch = targetUrl.match(/\/([^\/?#]+)(?:[?#]|$)/);
+          return json({ title: pathMatch ? decodeURIComponent(pathMatch[1]) : "" });
+        }
+      }
       if (method === "GET" && path.startsWith("/api/locations/")) {
         const id = path.split("/").pop();
         const result = await db.prepare("SELECT * FROM locations WHERE id = ?").bind(id).first();
@@ -96,12 +123,14 @@ var worker_default = {
           end_y: parseCoord(body.end_y),
           end_z: parseCoord(body.end_z),
           description: (body.description || "").trim(),
+          link_url: (body.link_url || "").trim().replace(/^(?!https?:\/\/).+/i, (m) => "https://" + m),
+          link_title: (body.link_title || "").trim(),
           created_at: now,
           updated_at: now
         };
         await db.prepare(
-          `INSERT INTO locations (id, name, category, overworld_x, overworld_y, overworld_z, nether_x, nether_y, nether_z, end_x, end_y, end_z, description, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO locations (id, name, category, overworld_x, overworld_y, overworld_z, nether_x, nether_y, nether_z, end_x, end_y, end_z, description, link_url, link_title, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           loc.id,
           loc.name,
@@ -116,6 +145,8 @@ var worker_default = {
           loc.end_y,
           loc.end_z,
           loc.description,
+          loc.link_url,
+          loc.link_title,
           loc.created_at,
           loc.updated_at
         ).run();
@@ -139,6 +170,8 @@ var worker_default = {
           "end_y = ?",
           "end_z = ?",
           "description = ?",
+          "link_url = ?",
+          "link_title = ?",
           "updated_at = ?"
         ];
         const vals = [
@@ -154,6 +187,8 @@ var worker_default = {
           body.end_y !== void 0 ? parseCoord(body.end_y) : existing.end_y,
           body.end_z !== void 0 ? parseCoord(body.end_z) : existing.end_z,
           body.description !== void 0 ? (body.description || "").trim() : existing.description,
+          body.link_url !== void 0 ? (body.link_url || "").trim().replace(/^(?!https?:\/\/).+/i, (m) => "https://" + m) : existing.link_url,
+          body.link_title !== void 0 ? (body.link_title || "").trim() : existing.link_title,
           Date.now(),
           id
         ];
@@ -219,7 +254,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-Ygvfob/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-DHVwAj/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -251,7 +286,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-Ygvfob/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-DHVwAj/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

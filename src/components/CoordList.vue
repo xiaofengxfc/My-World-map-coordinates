@@ -24,6 +24,7 @@
 
         <div class="coord-card-time">🕐 {{ relativeTime(loc.created_at) }}</div>
         <div class="coord-card-desc" v-if="loc.description">{{ loc.description }}</div>
+        <a v-if="loc.link_url" :href="loc.link_url" target="_blank" class="coord-card-link" @click.stop>📄 {{ loc.link_title || loc.link_url }}</a>
         <div class="coord-card-actions" @click.stop>
           <button class="btn-icon" @click="$emit('edit', loc)" title="编辑">✏️</button>
           <button class="btn-icon danger" @click="$emit('delete', loc.id)" title="删除">🗑️</button>
@@ -75,4 +76,6 @@ function relativeTime(ts) {
 .coord-card-time { font-size: 0.72rem; color: var(--text-tertiary); margin-bottom: 4px; }
 .coord-card-desc { font-size: 0.78rem; color: var(--text-secondary); padding-top: 8px; border-top: 1px solid var(--border-light); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .coord-card-actions { display: flex; gap: 4px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-light); justify-content: flex-end; }
+.coord-card-link { display: block; font-size: 0.78rem; color: var(--accent); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-light); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.coord-card-link:hover { text-decoration: underline; }
 </style>
