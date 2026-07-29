@@ -9,4 +9,4 @@ assets = { directory = "./dist", not_found_handling = "single-page-application" 
 [[d1_databases]]
 binding = "DB"
 database_name = "mc-coords"
-database_id = "your-database-id-here"
+database_id = "e1800a33-02d0-4865-a184-f8128917c442"
