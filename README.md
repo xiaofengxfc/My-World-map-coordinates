@@ -10,7 +10,7 @@
 | **样式** | 极简主义纯 CSS |
 | **后端** | Cloudflare Workers |
 | **数据库** | Cloudflare D1 (SQLite) |
-| **部署** | 单一 Worker（托管前端 + API） |
+| **部署** | 单一 Worker（托管前端 + API + 自动迁移） |
 
 ## 项目结构
 
@@ -51,12 +51,6 @@
         非 /api/*  → 返回 index.html（SPA 回退）
         /api/*     → Worker → D1 数据库
 ```
-
-**关键要点**：
-- 前端静态文件由 **wrangler assets** 托管
-- SPA 路由回退由 wrangler 内置处理
-- Worker 仅处理 `/api/*` 路由
-- Worker 首次请求时自动迁移数据库（补齐缺失字段）
 
 ## 数据模型
 
@@ -105,14 +99,24 @@ cd worker
 npx.cmd wrangler dev --config ../wrangler.dev.toml
 ```
 
-首次启动后初始化本地数据库：
+### 2. 初始化本地数据库
+
+Worker 启动后，新开一个终端执行：
 
 ```bash
 cd worker
-npx.cmd wrangler d1 execute mc-coords --file=schema.sql --local
+npx.cmd wrangler d1 execute mc-coords --file schema.sql --local
 ```
 
-### 2. 启动前端
+如果之前已有旧数据需要重建：
+
+```bash
+# 先删旧表再建新表
+npx.cmd wrangler d1 execute mc-coords --command "DROP TABLE IF EXISTS locations" --local
+npx.cmd wrangler d1 execute mc-coords --file schema.sql --local
+```
+
+### 3. 启动前端
 
 ```bash
 npm install
@@ -158,9 +162,28 @@ database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
 ### 3. 初始化表结构
 
-命令行或 D1 控制台执行：
+**方式 A：命令行**
+
+```bash
+cd worker
+npx.cmd wrangler d1 execute mc-coords --file schema.sql
+```
+
+如果旧表结构不匹配，先删后建：
+
+```bash
+npx.cmd wrangler d1 execute mc-coords --command "DROP TABLE IF EXISTS locations"
+# 再执行建表
+npx.cmd wrangler d1 execute mc-coords --file schema.sql
+```
+
+**方式 B：D1 控制台**
+
+登录 Cloudflare Dashboard → Workers & Pages → D1 → 选择 `mc-coords` → Console，粘贴以下 SQL：
 
 ```sql
+DROP TABLE IF EXISTS locations;
+
 CREATE TABLE IF NOT EXISTS locations (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -185,6 +208,8 @@ CREATE INDEX IF NOT EXISTS idx_locations_category ON locations(category);
 CREATE INDEX IF NOT EXISTS idx_locations_created_at ON locations(created_at);
 ```
 
+> ⚠️ `DROP TABLE` 会清空所有已有数据。如果有重要数据，在 D1 控制台先导出备份。
+
 ### 4. 构建 + 部署
 
 ```bash
@@ -192,4 +217,17 @@ npm run deploy
 ```
 
 > 等效于 `npm run build && wrangler deploy`。wrangler 已预装在 `devDependencies` 中，无需 `npx`。
-> Worker 首次请求时自动执行数据库迁移（`ALTER TABLE ADD COLUMN`），补齐缺失字段，无需手动更新旧表。
+
+### 自动迁移机制
+
+Worker 首次收到请求时会自动执行 `runMigrations()`，依次尝试执行 `ALTER TABLE ADD COLUMN`：
+
+```js
+const migrations = [
+  "ALTER TABLE locations ADD COLUMN category TEXT DEFAULT ''",
+  "ALTER TABLE locations ADD COLUMN overworld_x REAL",
+  // ... 所有后续新增的字段
+]
+```
+
+已存在的列会静默跳过，缺失的列自动补齐。因此旧表无需手动更新，部署新版 Worker 后首次请求即可完成迁移。
