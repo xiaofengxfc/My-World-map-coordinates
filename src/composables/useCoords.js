@@ -1,10 +1,21 @@
 import { ref, computed } from 'vue'
-import {
-  getAllLocationsSorted,
-  addLocation,
-  updateLocation,
-  deleteLocation,
-} from '../db/index.js'
+
+// API 基础路径
+// 开发时通过 Vite proxy 转发到 Worker（localhost:8787）
+// 生产时由 Cloudflare Pages 的 Functions 或独立 Worker 域名处理
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
+
+async function api(path, options = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: '请求失败' }))
+    throw new Error(err.error || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
 
 export function useCoords() {
   const locations = ref([])
@@ -14,7 +25,6 @@ export function useCoords() {
   const dimensionFilter = ref('all')
   const editingId = ref(null)
 
-  // 表单数据
   const form = ref({
     name: '',
     dimension: 'overworld',
@@ -25,9 +35,9 @@ export function useCoords() {
   })
 
   const filteredLocations = computed(() => {
+    // 前端再做一遍客户端过滤，但主要依赖后端 API
     let list = locations.value
 
-    // 搜索
     if (searchQuery.value) {
       const q = searchQuery.value.toLowerCase()
       list = list.filter(l =>
@@ -37,25 +47,20 @@ export function useCoords() {
       )
     }
 
-    // 维度筛选
     if (dimensionFilter.value && dimensionFilter.value !== 'all') {
       list = list.filter(l => l.dimension === dimensionFilter.value)
     }
 
-    // 排序
     const sorted = [...list]
     switch (sortBy.value) {
       case 'oldest':
-        sorted.sort((a, b) => a.createdAt - b.createdAt)
-        break
+        sorted.sort((a, b) => a.created_at - b.created_at); break
       case 'name':
-        sorted.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
-        break
+        sorted.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN')); break
       case 'name-desc':
-        sorted.sort((a, b) => b.name.localeCompare(a.name, 'zh-CN'))
-        break
+        sorted.sort((a, b) => b.name.localeCompare(a.name, 'zh-CN')); break
       default:
-        sorted.sort((a, b) => b.createdAt - a.createdAt)
+        sorted.sort((a, b) => b.created_at - a.created_at)
     }
 
     return sorted
@@ -65,8 +70,19 @@ export function useCoords() {
 
   async function loadLocations() {
     loading.value = true
-    locations.value = await getAllLocationsSorted()
-    loading.value = false
+    try {
+      const params = new URLSearchParams({
+        sort: sortBy.value,
+        dimension: dimensionFilter.value,
+        search: searchQuery.value,
+      })
+      locations.value = await api(`/locations?${params}`)
+    } catch (err) {
+      console.error('加载坐标失败:', err)
+      locations.value = []
+    } finally {
+      loading.value = false
+    }
   }
 
   function openAddForm() {
@@ -97,19 +113,33 @@ export function useCoords() {
     const data = form.value
     if (!data.name.trim()) return false
 
-    if (editingId.value) {
-      await updateLocation(editingId.value, data)
-    } else {
-      await addLocation(data)
+    try {
+      if (editingId.value) {
+        await api(`/locations/${editingId.value}`, {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        })
+      } else {
+        await api('/locations', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        })
+      }
+      await loadLocations()
+      return true
+    } catch (err) {
+      console.error('保存坐标失败:', err)
+      return false
     }
-
-    await loadLocations()
-    return true
   }
 
   async function removeLocation(id) {
-    await deleteLocation(id)
-    await loadLocations()
+    try {
+      await api(`/locations/${id}`, { method: 'DELETE' })
+      await loadLocations()
+    } catch (err) {
+      console.error('删除坐标失败:', err)
+    }
   }
 
   return {

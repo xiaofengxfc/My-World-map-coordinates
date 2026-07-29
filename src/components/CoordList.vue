@@ -18,7 +18,7 @@
           <span>Y <span class="coord-value-y">{{ loc.y }}</span></span>
           <span>Z <span class="coord-value">{{ loc.z }}</span></span>
         </div>
-        <div class="coord-card-time">🕐 {{ relativeTime(loc.createdAt) }}</div>
+        <div class="coord-card-time">🕐 {{ relativeTime(loc.created_at) }}</div>
         <div class="coord-card-desc" v-if="loc.description">{{ loc.description }}</div>
         <div class="coord-card-actions" @click.stop>
           <button class="btn-copy-tp" :class="{ copied: copiedId === loc.id }" @click="copyTP(loc)">

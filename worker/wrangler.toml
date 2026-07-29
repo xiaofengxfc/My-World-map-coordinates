@@ -1,0 +1,10 @@
+name = "mc-coords-api"
+main = "index.js"
+compatibility_date = "2025-04-01"
+
+# 创建 D1 数据库后，将 database_id 填入下方
+# npx wrangler d1 create mc-coords
+[[d1_databases]]
+binding = "DB"
+database_name = "mc-coords"
+database_id = "your-database-id-here"
