@@ -143,7 +143,6 @@ export function useCoords() {
     try {
       await api(`/locations/${id}`, { method: 'DELETE' })
       await loadLocations()
-      await loadCategories()
     } catch (err) {
       console.error('删除坐标失败:', err)
     }

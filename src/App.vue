@@ -132,6 +132,10 @@ async function handleSave(data) {
   if (ok) {
     showForm.value = false
     await refreshCategories()
+    // 如果当前筛选的分类已不存在，重置筛选
+    if (categoryFilter.value && !allCategories.value.some(c => c.category === categoryFilter.value)) {
+      categoryFilter.value = ''
+    }
     showToast(editingId.value ? '✅ 坐标已更新' : '✅ 坐标已添加')
   }
 }
@@ -148,6 +152,10 @@ async function confirmDelete() {
   await removeLocation(deletingId.value)
   showDeleteConfirm.value = false
   await refreshCategories()
+  // 如果当前筛选的分类已被删除，重置筛选
+  if (categoryFilter.value && !allCategories.value.some(c => c.category === categoryFilter.value)) {
+    categoryFilter.value = ''
+  }
   showToast('🗑️ 坐标已删除')
 }
 

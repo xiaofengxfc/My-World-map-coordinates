@@ -121,8 +121,9 @@ const localForm = reactive({
 
 const filteredCategories = computed(() => {
   const q = localForm.category.toLowerCase()
+  if (!q) return props.allCategories
   return props.allCategories.filter(c =>
-    c.category.toLowerCase().includes(q) && c.category !== localForm.category
+    c.category.toLowerCase().includes(q)
   )
 })
 
