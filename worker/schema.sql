@@ -1,13 +1,25 @@
--- 分类系统 - 替代预设维度
--- category 为自定义分类，可为空（默认未分类）
+-- 三维坐标记录：一个条目包含主世界/下界/末地坐标
 
 CREATE TABLE IF NOT EXISTS locations (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   category TEXT DEFAULT '',
-  x REAL NOT NULL,
-  y REAL NOT NULL DEFAULT 64,
-  z REAL NOT NULL,
+
+  -- 主世界
+  overworld_x REAL,
+  overworld_y REAL,
+  overworld_z REAL,
+
+  -- 下界
+  nether_x REAL,
+  nether_y REAL,
+  nether_z REAL,
+
+  -- 末地
+  end_x REAL,
+  end_y REAL,
+  end_z REAL,
+
   description TEXT DEFAULT '',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL

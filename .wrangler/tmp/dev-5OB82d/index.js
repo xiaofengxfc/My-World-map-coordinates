@@ -19,17 +19,18 @@ function generateId() {
   return (idCounter++).toString(36) + Math.random().toString(36).substring(2, 8);
 }
 __name(generateId, "generateId");
+function parseCoord(val, fallback = null) {
+  if (val === void 0 || val === "" || val === null || isNaN(Number(val))) return fallback;
+  return parseFloat(val);
+}
+__name(parseCoord, "parseCoord");
 var worker_default = {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (!url.pathname.startsWith("/api/")) {
-      return new Response("Not Found", { status: 404 });
-    }
+    if (!url.pathname.startsWith("/api/")) return new Response("Not Found", { status: 404 });
     const path = url.pathname;
     const method = request.method;
-    if (method === "OPTIONS") {
-      return new Response(null, { headers: CORS_HEADERS });
-    }
+    if (method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
     const db = env.DB;
     try {
       if (method === "GET" && path === "/api/locations") {
@@ -79,23 +80,45 @@ var worker_default = {
       }
       if (method === "POST" && path === "/api/locations") {
         const body = await request.json();
-        const { name, category, x, y, z, description } = body;
-        if (!name || !name.trim()) return json({ error: "\u540D\u79F0\u4E0D\u80FD\u4E3A\u7A7A" }, 400);
+        if (!body.name || !body.name.trim()) return json({ error: "\u540D\u79F0\u4E0D\u80FD\u4E3A\u7A7A" }, 400);
         const now = Date.now();
         const loc = {
           id: generateId(),
-          name: name.trim(),
-          category: (category || "").trim(),
-          x: parseFloat(x) || 0,
-          y: y !== void 0 && y !== "" ? parseFloat(y) : 0,
-          z: parseFloat(z) || 0,
-          description: (description || "").trim(),
+          name: body.name.trim(),
+          category: (body.category || "").trim(),
+          overworld_x: parseCoord(body.overworld_x),
+          overworld_y: parseCoord(body.overworld_y),
+          overworld_z: parseCoord(body.overworld_z),
+          nether_x: parseCoord(body.nether_x),
+          nether_y: parseCoord(body.nether_y),
+          nether_z: parseCoord(body.nether_z),
+          end_x: parseCoord(body.end_x),
+          end_y: parseCoord(body.end_y),
+          end_z: parseCoord(body.end_z),
+          description: (body.description || "").trim(),
           created_at: now,
           updated_at: now
         };
         await db.prepare(
-          "INSERT INTO locations (id, name, category, x, y, z, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        ).bind(loc.id, loc.name, loc.category, loc.x, loc.y, loc.z, loc.description, loc.created_at, loc.updated_at).run();
+          `INSERT INTO locations (id, name, category, overworld_x, overworld_y, overworld_z, nether_x, nether_y, nether_z, end_x, end_y, end_z, description, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          loc.id,
+          loc.name,
+          loc.category,
+          loc.overworld_x,
+          loc.overworld_y,
+          loc.overworld_z,
+          loc.nether_x,
+          loc.nether_y,
+          loc.nether_z,
+          loc.end_x,
+          loc.end_y,
+          loc.end_z,
+          loc.description,
+          loc.created_at,
+          loc.updated_at
+        ).run();
         return json(loc, 201);
       }
       if (method === "PUT" && path.startsWith("/api/locations/")) {
@@ -103,24 +126,43 @@ var worker_default = {
         const existing = await db.prepare("SELECT * FROM locations WHERE id = ?").bind(id).first();
         if (!existing) return json({ error: "\u672A\u627E\u5230" }, 404);
         const body = await request.json();
-        await db.prepare(
-          "UPDATE locations SET name = ?, category = ?, x = ?, y = ?, z = ?, description = ?, updated_at = ? WHERE id = ?"
-        ).bind(
+        const updates = [
+          "name = ?",
+          "category = ?",
+          "overworld_x = ?",
+          "overworld_y = ?",
+          "overworld_z = ?",
+          "nether_x = ?",
+          "nether_y = ?",
+          "nether_z = ?",
+          "end_x = ?",
+          "end_y = ?",
+          "end_z = ?",
+          "description = ?",
+          "updated_at = ?"
+        ];
+        const vals = [
           body.name !== void 0 ? body.name.trim() : existing.name,
           body.category !== void 0 ? (body.category || "").trim() : existing.category,
-          body.x !== void 0 ? parseFloat(body.x) : existing.x,
-          body.y !== void 0 ? body.y !== "" ? parseFloat(body.y) : 0 : existing.y,
-          body.z !== void 0 ? parseFloat(body.z) : existing.z,
+          body.overworld_x !== void 0 ? parseCoord(body.overworld_x) : existing.overworld_x,
+          body.overworld_y !== void 0 ? parseCoord(body.overworld_y) : existing.overworld_y,
+          body.overworld_z !== void 0 ? parseCoord(body.overworld_z) : existing.overworld_z,
+          body.nether_x !== void 0 ? parseCoord(body.nether_x) : existing.nether_x,
+          body.nether_y !== void 0 ? parseCoord(body.nether_y) : existing.nether_y,
+          body.nether_z !== void 0 ? parseCoord(body.nether_z) : existing.nether_z,
+          body.end_x !== void 0 ? parseCoord(body.end_x) : existing.end_x,
+          body.end_y !== void 0 ? parseCoord(body.end_y) : existing.end_y,
+          body.end_z !== void 0 ? parseCoord(body.end_z) : existing.end_z,
           body.description !== void 0 ? (body.description || "").trim() : existing.description,
           Date.now(),
           id
-        ).run();
+        ];
+        await db.prepare(`UPDATE locations SET ${updates.join(", ")} WHERE id = ?`).bind(...vals).run();
         const updated = await db.prepare("SELECT * FROM locations WHERE id = ?").bind(id).first();
         return json(updated);
       }
       if (method === "DELETE" && path.startsWith("/api/locations/")) {
-        const id = path.split("/").pop();
-        await db.prepare("DELETE FROM locations WHERE id = ?").bind(id).run();
+        await db.prepare("DELETE FROM locations WHERE id = ?").bind(path.split("/").pop()).run();
         return json({ success: true });
       }
       return json({ error: "Not Found" }, 404);
@@ -177,7 +219,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-67HE4c/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-Ygvfob/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -209,7 +251,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-67HE4c/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-Ygvfob/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

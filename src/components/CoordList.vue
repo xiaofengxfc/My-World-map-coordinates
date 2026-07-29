@@ -1,27 +1,30 @@
 <template>
   <div>
     <div class="coord-grid" v-if="filteredLocations.length > 0">
-      <div
-        class="coord-card"
-        v-for="loc in filteredLocations"
-        :key="loc.id"
-        @click="$emit('edit', loc)"
-      >
+      <div class="coord-card" v-for="loc in filteredLocations" :key="loc.id" @click="$emit('edit', loc)">
         <div class="coord-card-header">
           <span class="coord-card-name">{{ loc.name }}</span>
           <span v-if="loc.category" class="category-badge">{{ loc.category }}</span>
         </div>
-        <div class="coord-card-coords">
-          <span>X <span class="coord-value">{{ loc.x }}</span></span>
-          <span>Y <span class="coord-value-y">{{ loc.y }}</span></span>
-          <span>Z <span class="coord-value">{{ loc.z }}</span></span>
+
+        <div class="dims">
+          <div class="dim-row" v-if="loc.overworld_x !== null">
+            <span class="dim-label"><span class="dot overworld"></span> 主世界</span>
+            <span class="dim-coords">X {{ loc.overworld_x }} Y {{ loc.overworld_y ?? '—' }} Z {{ loc.overworld_z }}</span>
+          </div>
+          <div class="dim-row" v-if="loc.nether_x !== null">
+            <span class="dim-label"><span class="dot nether"></span> 下界</span>
+            <span class="dim-coords">X {{ loc.nether_x }} Y {{ loc.nether_y ?? '—' }} Z {{ loc.nether_z }}</span>
+          </div>
+          <div class="dim-row" v-if="loc.end_x !== null">
+            <span class="dim-label"><span class="dot end"></span> 末地</span>
+            <span class="dim-coords">X {{ loc.end_x }} Y {{ loc.end_y ?? '—' }} Z {{ loc.end_z }}</span>
+          </div>
         </div>
+
         <div class="coord-card-time">🕐 {{ relativeTime(loc.created_at) }}</div>
         <div class="coord-card-desc" v-if="loc.description">{{ loc.description }}</div>
         <div class="coord-card-actions" @click.stop>
-          <button class="btn-copy-tp" :class="{ copied: copiedId === loc.id }" @click="copyTP(loc)">
-            {{ copiedId === loc.id ? '✅ 已复制' : '📋 /tp' }}
-          </button>
           <button class="btn-icon" @click="$emit('edit', loc)" title="编辑">✏️</button>
           <button class="btn-icon danger" @click="$emit('delete', loc.id)" title="删除">🗑️</button>
         </div>
@@ -41,13 +44,8 @@
 <script setup>
 import { ref } from 'vue'
 
-defineProps({
-  filteredLocations: { type: Array, required: true },
-})
-
+defineProps({ filteredLocations: { type: Array, required: true } })
 const emit = defineEmits(['edit', 'delete'])
-
-const copiedId = ref(null)
 
 function relativeTime(ts) {
   const diff = Date.now() - ts
@@ -62,25 +60,19 @@ function relativeTime(ts) {
   const pad = n => n.toString().padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
 }
-
-function copyTP(loc) {
-  const cmd = `/tp ${loc.x} ${loc.y} ${loc.z}`
-  navigator.clipboard.writeText(cmd).then(() => {
-    copiedId.value = loc.id
-    setTimeout(() => { copiedId.value = null }, 1500)
-  }).catch(() => {})
-}
 </script>
 
 <style scoped>
-.category-badge {
-  font-size: 0.68rem;
-  padding: 2px 8px;
-  border-radius: 6px;
-  white-space: nowrap;
-  flex-shrink: 0;
-  font-weight: 500;
-  background: var(--accent-subtle);
-  color: var(--accent);
-}
+.dims { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.dim-row { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; font-family: var(--mono); }
+.dim-label { display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: var(--text-tertiary); min-width: 48px; font-family: var(--font); }
+.dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.dot.overworld { background: #16a34a; }
+.dot.nether { background: #dc2626; }
+.dot.end { background: #7c3aed; }
+.dim-coords { color: var(--text-secondary); }
+.category-badge { font-size: 0.68rem; padding: 2px 8px; border-radius: 6px; white-space: nowrap; flex-shrink: 0; font-weight: 500; background: var(--accent-subtle); color: var(--accent); }
+.coord-card-time { font-size: 0.72rem; color: var(--text-tertiary); margin-bottom: 4px; }
+.coord-card-desc { font-size: 0.78rem; color: var(--text-secondary); padding-top: 8px; border-top: 1px solid var(--border-light); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.coord-card-actions { display: flex; gap: 4px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-light); justify-content: flex-end; }
 </style>
