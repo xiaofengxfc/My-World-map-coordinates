@@ -1,13 +1,11 @@
-name = "mc-coords"
+name = "my-world-map-coordinates"
 main = "index.js"
 compatibility_date = "2025-04-01"
 
-# 托管前端静态文件（构建产物）
-[site]
-bucket = "../dist"
+# 静态文件由 wrangler assets 托管
+# 在根目录已自动生成 wrangler.jsonc，包含 SPA fallback 配置
 
 # D1 数据库
-# 创建后填入 database_id：npx.cmd wrangler d1 create mc-coords
 [[d1_databases]]
 binding = "DB"
 database_name = "mc-coords"

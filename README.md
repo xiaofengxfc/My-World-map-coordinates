@@ -18,8 +18,7 @@
 ├── index.html              # Vite 入口
 ├── vite.config.js           # Vite 配置（dev proxy → Worker）
 ├── public/
-│   ├── _headers             # 安全响应头
-│   └── _redirects           # SPA 路由回退
+│   └── _headers             # 安全响应头
 ├── src/
 │   ├── main.js              # Vue 挂载
 │   ├── App.vue              # 根组件
@@ -31,10 +30,9 @@
 │       ├── useCoords.js     # 坐标状态管理（API 调用）
 │       └── useToast.js      # Toast 通知
 ├── worker/
-│   ├── index.js             # Worker 入口（前端托管 + API）
-│   ├── schema.sql           # D1 表结构
-│   ├── wrangler.toml        # Worker 配置
-│   └── package.json         # Worker 依赖
+│   ├── index.js             # Worker API（/api/* → D1）
+│   ├── wrangler.toml        # D1 数据库配置
+│   └── schema.sql           # 表结构
 ├── dist/                    # 前端构建产物
 └── package.json             # 前端依赖
 ```
@@ -44,14 +42,17 @@
 ```
 用户 → https://mc-coords.xxx.workers.dev
                   │
-            Worker 路由
-              ├── /api/*   → API 处理（D1 数据库）
-              └── 其他路径  → 返回前端静态文件（dist/）
+        wrangler assets（托管前端静态文件）
+                  │
+        非 /api/*  → 返回 index.html（SPA 回退）
+        /api/*     → Worker → D1 数据库
 ```
 
-**单一 Worker 同时承担**：
-- 托管前端页面和静态资源（通过 Workers Sites）
-- 提供 RESTful API（连接 D1 数据库）
+**关键要点**：
+- 前端静态文件由 **wrangler assets** 托管（通过 `wrangler.jsonc` 的 `assets` 配置）
+- SPA 路由回退由 wrangler 内置处理（`not_found_handling: "single-page-application"`）
+- Worker **仅处理 `/api/*`** 路由，代码更精简
+- 无需 `_redirects` 文件，无需 `@cloudflare/kv-asset-handler` 依赖
 
 ## 本地开发
 
@@ -104,18 +105,17 @@ database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 将 `database_id` 填入 `worker/wrangler.toml`：
 
 ```toml
-name = "mc-coords"
+name = "my-world-map-coordinates"
 main = "index.js"
 compatibility_date = "2025-04-01"
-
-[site]
-bucket = "../dist"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "mc-coords"
 database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 ```
+
+> 静态文件由 wrangler 自动托管，`wrangler.jsonc` 会在首次 `wrangler deploy` 时自动生成，包含 SPA 回退配置。无需手动创建 `_redirects` 文件。
 
 ### 3. 初始化表结构
 
@@ -145,18 +145,15 @@ CREATE INDEX IF NOT EXISTS idx_locations_dimension ON locations(dimension);
 CREATE INDEX IF NOT EXISTS idx_locations_created_at ON locations(created_at);
 ```
 
-### 4. 构建前端 + 部署 Worker
+### 4. 构建 + 部署
 
 ```bash
-# 构建前端
+# 构建前端并部署 Worker（从项目根目录运行）
 npm run build
-
-# 部署 Worker（自动上传 dist/ 中的静态文件）
-cd worker
 npx.cmd wrangler deploy
 ```
 
-部署成功后访问输出的 Worker 域名即可。
+> 首次部署时 wrangler 会自动创建 `wrangler.jsonc`，配置 Vite 框架预设和 SPA 回退。部署成功后访问输出的 Worker 域名即可。
 
 ## 数据模型
 
