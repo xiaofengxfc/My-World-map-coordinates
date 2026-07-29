@@ -1,0 +1,9 @@
+{
+  "name": "mc-coords-worker",
+  "private": true,
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudflare/kv-asset-handler": "^0.4.0"
+  }
+}

@@ -7,51 +7,77 @@
 | 层 | 技术 |
 |------|------|
 | **前端** | Vue 3 + Vite |
-| **样式** | 极简主义纯 CSS（无 UI 框架） |
-| **API** | Cloudflare Workers |
+| **样式** | 极简主义纯 CSS |
+| **后端** | Cloudflare Workers |
 | **数据库** | Cloudflare D1 (SQLite) |
-| **部署** | Cloudflare Pages + Workers |
+| **部署** | 单一 Worker（托管前端 + API） |
 
 ## 项目结构
 
 ```
-├── index.html                    # 入口
-├── vite.config.js                # Vite 配置（含 /api → Worker 代理）
+├── index.html              # Vite 入口
+├── vite.config.js           # Vite 配置（dev proxy → Worker）
 ├── public/
-│   ├── _headers                  # 安全响应头
-│   └── _redirects                # SPA 路由回退
-├── functions/
-│   └── api/
-│       └── [[path]].js           # Pages Functions 代理 → Worker
+│   ├── _headers             # 安全响应头
+│   └── _redirects           # SPA 路由回退
 ├── src/
-│   ├── main.js                   # Vue 挂载
-│   ├── App.vue                   # 根组件
-│   ├── assets/style.css          # 全局样式
+│   ├── main.js              # Vue 挂载
+│   ├── App.vue              # 根组件
+│   ├── assets/style.css     # 全局样式
 │   ├── components/
-│   │   ├── CoordList.vue         # 坐标卡片列表
-│   │   └── CoordForm.vue         # 添加/编辑模态框
+│   │   ├── CoordList.vue    # 坐标卡片列表
+│   │   └── CoordForm.vue    # 添加/编辑模态框
 │   └── composables/
-│       ├── useCoords.js          # 坐标状态管理（API 调用）
-│       └── useToast.js           # Toast 通知
+│       ├── useCoords.js     # 坐标状态管理（API 调用）
+│       └── useToast.js      # Toast 通知
 ├── worker/
-│   ├── index.js                  # Workers API (CRUD)
-│   ├── schema.sql                # D1 表结构
-│   └── wrangler.toml             # Worker 配置
-└── dist/                         # 构建产物
+│   ├── index.js             # Worker 入口（前端托管 + API）
+│   ├── schema.sql           # D1 表结构
+│   ├── wrangler.toml        # Worker 配置
+│   └── package.json         # Worker 依赖
+├── dist/                    # 前端构建产物
+└── package.json             # 前端依赖
 ```
+
+## 架构
+
+```
+用户 → https://mc-coords.xxx.workers.dev
+                  │
+            Worker 路由
+              ├── /api/*   → API 处理（D1 数据库）
+              └── 其他路径  → 返回前端静态文件（dist/）
+```
+
+**单一 Worker 同时承担**：
+- 托管前端页面和静态资源（通过 Workers Sites）
+- 提供 RESTful API（连接 D1 数据库）
 
 ## 本地开发
 
+### 1. 配置 Worker proxy
+
+修改 `vite.config.js`，将 proxy target 指向你的线上 Worker：
+
+```js
+server: {
+  proxy: {
+    '/api': {
+      target: 'https://mc-coords.xxx.workers.dev',
+      changeOrigin: true,
+    },
+  },
+}
+```
+
+### 2. 启动前端
+
 ```bash
 npm install
-
-# 终端 1：启动 Worker API（端口 8787）
-cd worker
-npx.cmd wrangler dev
-
-# 终端 2：启动前端（端口 5173，自动代理 /api → localhost:8787）
 npm run dev
 ```
+
+前端运行在 `http://localhost:5173`，`/api/*` 请求自动转发到线上 Worker。
 
 ## 部署
 
@@ -68,32 +94,38 @@ npx.cmd wrangler d1 create mc-coords
 ✅ Successfully created DB 'mc-coords' in region APAC
 
 [[d1_databases]]
-binding = "DB"                              # 代码中通过 env.DB 访问
+binding = "DB"
 database_name = "mc-coords"
-database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # 复制此 ID
+database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 ```
+
+### 2. 配置 wrangler.toml
 
 将 `database_id` 填入 `worker/wrangler.toml`：
 
 ```toml
-name = "mc-coords-api"
+name = "mc-coords"
 main = "index.js"
 compatibility_date = "2025-04-01"
 
+[site]
+bucket = "../dist"
+
 [[d1_databases]]
-binding = "DB"              # 必须为 DB，与 Worker 代码一致
+binding = "DB"
 database_name = "mc-coords"
-database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # ← 替换
+database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 ```
 
-初始化表结构（二选一）：
+### 3. 初始化表结构
 
 ```bash
-# 方式 A：命令行
 cd worker
+
+# 方式 A：命令行
 npx.cmd wrangler d1 execute mc-coords --file schema.sql
 
-# 方式 B：D1 控制台直接粘贴 SQL
+# 方式 B：D1 控制台粘贴 SQL
 ```
 
 ```sql
@@ -113,38 +145,18 @@ CREATE INDEX IF NOT EXISTS idx_locations_dimension ON locations(dimension);
 CREATE INDEX IF NOT EXISTS idx_locations_created_at ON locations(created_at);
 ```
 
-### 2. 部署 Worker API
+### 4. 构建前端 + 部署 Worker
 
 ```bash
+# 构建前端
+npm run build
+
+# 部署 Worker（自动上传 dist/ 中的静态文件）
 cd worker
 npx.cmd wrangler deploy
 ```
 
-记下输出的 Worker 域名（如 `https://mc-coords-api.xxxxx.workers.dev`）。
-
-### 3. 部署 Pages 前端
-
-在 Cloudflare Pages 控制台连接 Git 仓库：
-
-1. **Framework preset** → 选择 **Vue**
-2. 确认构建配置：
-
-| 配置 | 值 |
-|------|-----|
-| Build command | `npm run build` |
-| Build output directory | `dist` |
-
-3. 添加 Pages Functions 环境变量（代理 `/api/*` 到 Worker）：
-
-   进入 Pages 项目 → **Settings** → **Environment variables** → 添加：
-
-   | 变量名 | 值 |
-   |-------|-----|
-   | `API_WORKER_URL` | `https://mc-coords-api.xxxxx.workers.dev` |
-
-   > 此变量在 Pages Functions 运行时读取（`functions/api/[[path]].js`），**无需重建**。
-
-> 前端始终请求同域的 `/api/*`，由 Pages Functions 代理转发到 Worker。**不需要设置 `VITE_API_URL`**。
+部署成功后访问输出的 Worker 域名即可。
 
 ## 数据模型
 
