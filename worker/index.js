@@ -67,8 +67,12 @@ export default {
       // GET /api/categories
       if (method === 'GET' && path === '/api/categories') {
         const { results } = await db.prepare(
-          "SELECT category, COUNT(*) as count FROM locations WHERE category != '' GROUP BY category ORDER BY category ASC"
+          "SELECT category, COUNT(*) as count FROM locations GROUP BY category ORDER BY category ASC"
         ).all()
+        // 确保"未分类"始终在列表中
+        if (!results.some(r => r.category === '未分类')) {
+          results.unshift({ category: '未分类', count: 0 })
+        }
         return json(results)
       }
 

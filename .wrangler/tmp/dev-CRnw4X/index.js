@@ -68,8 +68,11 @@ var worker_default = {
       }
       if (method === "GET" && path === "/api/categories") {
         const { results } = await db.prepare(
-          "SELECT category, COUNT(*) as count FROM locations WHERE category != '' GROUP BY category ORDER BY category ASC"
+          "SELECT category, COUNT(*) as count FROM locations GROUP BY category ORDER BY category ASC"
         ).all();
+        if (!results.some((r) => r.category === "\u672A\u5206\u7C7B")) {
+          results.unshift({ category: "\u672A\u5206\u7C7B", count: 0 });
+        }
         return json(results);
       }
       if (method === "GET" && path === "/api/fetch-title") {

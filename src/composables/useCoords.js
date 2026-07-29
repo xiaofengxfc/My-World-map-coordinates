@@ -25,7 +25,7 @@ export function useCoords() {
 
   const form = ref({
     name: '',
-    category: '',
+    category: '未分类',
     overworld_x: null,
     overworld_y: null,
     overworld_z: null,
@@ -86,7 +86,7 @@ export function useCoords() {
     editingId.value = null
     form.value = {
       name: '',
-      category: '',
+      category: '未分类',
       overworld_x: null,
       overworld_y: null,
       overworld_z: null,
@@ -106,7 +106,7 @@ export function useCoords() {
     editingId.value = loc.id
     form.value = {
       name: loc.name,
-      category: loc.category || '',
+      category: loc.category || '未分类',
       overworld_x: loc.overworld_x,
       overworld_y: loc.overworld_y ?? null,
       overworld_z: loc.overworld_z,

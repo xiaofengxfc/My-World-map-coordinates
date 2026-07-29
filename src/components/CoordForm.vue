@@ -77,7 +77,7 @@
             <label for="categoryInput">分类</label>
             <div class="category-wrap">
               <input id="categoryInput" v-model="localForm.category" type="text"
-                placeholder="未分类 — 输入新建或从列表选择" maxlength="20"
+                placeholder="未分类 — 输入新建或选择已有" maxlength="20"
                 @focus="showDropdown = true" @blur="onBlur" @input="showDropdown = true"
                 ref="categoryInput" autocomplete="off" />
               <div class="category-dropdown" v-if="showDropdown && filteredCategories.length > 0">
