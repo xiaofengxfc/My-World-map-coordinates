@@ -1,9 +1,9 @@
 import { ref, computed } from 'vue'
 
 // API 基础路径
-// 开发时通过 Vite proxy 转发到 Worker（localhost:8787）
-// 生产时由 Cloudflare Pages 的 Functions 或独立 Worker 域名处理
-const API_BASE = import.meta.env.VITE_API_URL || '/api'
+// 通过 Pages Functions (/functions/api/[[path]].js) 代理到 Worker
+// 无需设置 VITE_API_URL 环境变量
+const API_BASE = '/api'
 
 async function api(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
