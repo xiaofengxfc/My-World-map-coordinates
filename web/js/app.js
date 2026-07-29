@@ -387,10 +387,13 @@ const App = {
     const cats = DataStore.getCategories();
     let html = '<div class="category-item active" data-category-id="all"><span class="color-dot" style="background:#888"></span><span class="cat-name">全部分类</span></div>';
 
-    cats.forEach(c => {
-      const count = DataStore.getLocationCountByCategory(c.id);
-      const active = this._state.currentCategory === c.id ? ' active' : '';
-      html += `<div class="category-item${active}" data-category-id="${c.id}">
+    if (cats.length === 0) {
+      html += '<div class="sidebar-empty">暂无分类，点击上方 ＋ 添加</div>';
+    } else {
+      cats.forEach(c => {
+        const count = DataStore.getLocationCountByCategory(c.id);
+        const active = this._state.currentCategory === c.id ? ' active' : '';
+        html += `<div class="category-item${active}" data-category-id="${c.id}">
         <span class="color-dot" style="background:${c.color}"></span>
         <span class="cat-icon">${c.icon || '📌'}</span>
         <span class="cat-name">${this._escapeHtml(c.name)}</span>
@@ -399,7 +402,8 @@ const App = {
           <button class="btn-icon category-edit" data-id="${c.id}" title="编辑">✏️</button>
         </span>
       </div>`;
-    });
+      });
+    }
 
     this.$categoryList.innerHTML = html;
 
@@ -449,6 +453,9 @@ const App = {
     catSel.innerHTML = '<option value="all">所有分类</option>' +
       cats.map(c => `<option value="${c.id}">${c.icon || '📌'} ${this._escapeHtml(c.name)}</option>`).join('');
     if (currentCat) catSel.value = currentCat;
+
+    // 无分类时隐藏分类筛选（只有"所有分类"一个选项）
+    catSel.style.display = cats.length === 0 ? 'none' : '';
   },
 
   // ---- 渲染：坐标列表 ----

@@ -56,14 +56,7 @@ function dimensionName(dim) {
 
 // ---- 默认数据 ----
 function getDefaultCategories() {
-  return [
-    { id: generateId(), name: '家', color: '#22c55e', icon: '🏠' },
-    { id: generateId(), name: '矿洞', color: '#78716c', icon: '⛏️' },
-    { id: generateId(), name: '遗迹', color: '#f97316', icon: '🏛️' },
-    { id: generateId(), name: '村庄', color: '#eab308', icon: '🏘️' },
-    { id: generateId(), name: '传送门', color: '#8b5cf6', icon: '🌀' },
-    { id: generateId(), name: '基地', color: '#3b82f6', icon: '⚔️' },
-  ];
+  return [];
 }
 
 function getDefaultWorlds() {
