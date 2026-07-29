@@ -25,7 +25,7 @@
               </div>
               <div class="coord-input">
                 <span class="coord-label">Y</span>
-                <input v-model.number="localForm.overworld_y" type="number" step="any" placeholder="—" />
+                <input v-model.number="localForm.overworld_y" type="number" step="any" placeholder="—" @input="autoCalcNether" />
               </div>
               <div class="coord-input">
                 <span class="coord-label">Z</span>
@@ -148,6 +148,9 @@ watch(() => props.editingId, () => { nextTick(() => nameInput.value?.focus()) },
 function autoCalcNether() {
   if (localForm.overworld_x !== null && localForm.overworld_x !== '' && !isNaN(Number(localForm.overworld_x))) {
     localForm.nether_x = Math.round(localForm.overworld_x / 8)
+  }
+  if (localForm.overworld_y !== null && localForm.overworld_y !== '' && !isNaN(Number(localForm.overworld_y))) {
+    localForm.nether_y = localForm.overworld_y
   }
   if (localForm.overworld_z !== null && localForm.overworld_z !== '' && !isNaN(Number(localForm.overworld_z))) {
     localForm.nether_z = Math.round(localForm.overworld_z / 8)
