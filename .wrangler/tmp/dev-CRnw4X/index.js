@@ -29,6 +29,16 @@ async function runMigrations(db) {
   if (migrated) return;
   migrated = true;
   const migrations = [
+    "ALTER TABLE locations ADD COLUMN category TEXT DEFAULT ''",
+    "ALTER TABLE locations ADD COLUMN overworld_x REAL",
+    "ALTER TABLE locations ADD COLUMN overworld_y REAL",
+    "ALTER TABLE locations ADD COLUMN overworld_z REAL",
+    "ALTER TABLE locations ADD COLUMN nether_x REAL",
+    "ALTER TABLE locations ADD COLUMN nether_y REAL",
+    "ALTER TABLE locations ADD COLUMN nether_z REAL",
+    "ALTER TABLE locations ADD COLUMN end_x REAL",
+    "ALTER TABLE locations ADD COLUMN end_y REAL",
+    "ALTER TABLE locations ADD COLUMN end_z REAL",
     "ALTER TABLE locations ADD COLUMN link_url TEXT DEFAULT ''",
     "ALTER TABLE locations ADD COLUMN link_title TEXT DEFAULT ''"
   ];
