@@ -62,10 +62,36 @@ cd worker
 npx wrangler d1 create mc-coords
 ```
 
-将输出的 `database_id` 填入 `worker/wrangler.toml`。
+输出示例：
+```
+✅ Successfully created DB 'mc-coords' in region APAC
+Created your new D1 database.
+
+[[d1_databases]]
+binding = "DB"      # ← 固定为 DB，与 Worker 代码中的 env.DB 对应
+database_name = "mc-coords"
+database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # ← 复制此 ID
+```
+
+将输出的 `database_id` 填入 `worker/wrangler.toml`：
+
+```toml
+# worker/wrangler.toml
+name = "mc-coords-api"
+main = "index.js"
+compatibility_date = "2025-04-01"
+
+[[d1_databases]]
+binding = "DB"              # 环境变量名，代码中用 env.DB 访问
+database_name = "mc-coords"  # 数据库名称
+database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # 替换为实际 ID
+```
+
+> **`binding` 必须为 `"DB"`**，因为 Worker 代码（`worker/index.js`）中通过 `env.DB` 访问数据库。如果修改 binding，需同步修改代码中的变量名。
+
+初始化表结构：
 
 ```bash
-# 初始化表结构
 npx wrangler d1 execute mc-coords --file=schema.sql
 ```
 
